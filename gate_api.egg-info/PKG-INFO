@@ -1,0 +1,13 @@
+Metadata-Version: 1.0
+Name: gate-api
+Version: 4.7.3
+Summary: Gate API v4
+Home-page: UNKNOWN
+Author: UNKNOWN
+Author-email: support@mail.gate.io
+License: UNKNOWN
+Description-Content-Type: UNKNOWN
+Description:     APIv4 provides spot, margin and futures trading operations. There are public APIs to retrieve the real-time market statistics, and private APIs which needs authentication to trade on user&#39;s behalf.  # noqa: E501
+            
+Keywords: OpenAPI,OpenAPI-Generator,Gate API v4
+Platform: UNKNOWN
