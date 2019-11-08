@@ -6,6 +6,8 @@ import time
 import gate_api
 from gate_api.rest import ApiException
 
-configuration = gate_api.Configuration()
-api_instance = gate_api.FuturesApi(gate_api.ApiClient(configuration))
+forward_configuration = gate_api.Forward_Configuration()
+backward_configuration = gate_api.Backward_Configuration()
+forward_api_instance = gate_api.FuturesApi(gate_api.ApiClient(forward_configuration))
+backward_api_instance = gate_api.FuturesApi(gate_api.ApiClient(backward_configuration))
 

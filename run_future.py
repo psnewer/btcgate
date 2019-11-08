@@ -21,10 +21,10 @@ def send_weixin(msg):
 
 if __name__ == "__main__":
     future_manager = Future_Manager()
-    while True:
-	try:
-            future_manager.check_position()
-            future_manager.handle_position()
-	except Exception as e:
-	    print("Exception when calling FuturesApi: %s\n" % e)
-	    send_weixin(e)
+#    while True:
+#	try:
+    future_manager.run()
+#            future_manager.handle_position()
+#	except Exception as e:
+#	    print("Exception when calling FuturesApi: %s\n" % e)
+#	    send_weixin(e)
