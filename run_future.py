@@ -30,17 +30,15 @@ if __name__ == "__main__":
 #            body_dic = json.loads(e.body)
 #            e_sig = True
 #            if 'label' in body_dic:
-#                print (body_dic['label'])
-#                if body_dic['label'] in ['ORDER_POC_IMMEDIATE','ORDER_NOT_FOUND','AUTO_ORDER_NOT_FOUND','INCREASE_POSITION'] :
+#                if body_dic['label'] in ['ORDER_POC_IMMEDIATE','ORDER_NOT_FOUND','INCREASE_POSITION'] :
 #                    e_sig = False
 #                else:
 #                    e_sig = True
 #            if e_sig and 'detail' in body_dic:
-#                print (body_dic['detail'])
 #                if body_dic['detail'] == 'invalid argument: #3':
 #                    e_sig = False
 #                else:
 #                    e_sig = True
 #            if e_sig:
-#                 raise ImportError('OpenAPI Python client requires urllib3.')
-#	    send_weixin(e)
+#                print ('e_sig')
+#	        send_weixin(e)
