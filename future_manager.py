@@ -27,34 +27,32 @@ class Future_Manager(object):
 
     def run(self):
         for handler in self.handlers:
-            handler.get_flag();
-            handler.put_position();
+            try:
+                handler.get_flag();
+                handler.put_position();
+            except Exception as e:
+                print("Exception when calling FuturesApi: %s\n" % e)
+                dic_clear = True
 
-#    def check_position(self):
-#        current_position = 0
-#	for handler in self.handlers:
-#            current_position += abs(handler.position_size)/handler.leverage
-#        if current_position >= self.total_params['minor_size']:
-#	    self.follow_signal = False
-#	else:
-#	    self.follow_signal = True
-#	account = api_instance.list_futures_accounts()
-#	current_insurance = float(account._available)
-#	if current_insurance <= self.total_params['minor_insurance']:
-#	    self.balance_signal = True
-#	else:
-#	    self.balance_signal = False
-#
-#    def put_position(self,follow_signal,balance_signal):
-#	for handler in self.handlers:
-#	    handler.get_position(follow_signal,balance_signal)
-#
-#    def cancel_position(self):
-#	for handler in self.handlers:
-#	    handler.cancel_position()
-#
-#    def handle_position(self):
-#	if not self.balance_signal:
-#	    self.put_position(self.follow_signal,self.balance_signal)
-#	else:
-#	    self.cancel_position()
+                try:
+                    body_dic = json.loads(e.body)
+                except Exception:
+                    send_email(e)
+                    dic_clear = False
+
+                if dic_clear:
+                    e_sig = True
+                    if 'label' in body_dic:
+                        if body_dic['label'] in ['ORDER_POC_IMMEDIATE','ORDER_NOT_FOUND','INCREASE_POSITION','INSUFFICIENT_AVAILABLE']:
+                            e_sig = False
+                        else:
+                            e_sig = True
+                    if e_sig and 'detail' in body_dic:
+                        if body_dic['detail'] == 'invalid argument: #3':
+                            e_sig = False
+                        else:
+                            e_sig = True
+                    if e_sig:
+                        print ('e_sig')
+                        send_email(e)
+
