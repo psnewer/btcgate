@@ -24,7 +24,7 @@ class Future_Handler(object):
         self.profit_gap = contract_params['profit_gap']
         self.mark_total_flag = False
         self.balance_overflow = 0
-        self.N_contract = 2
+        self.account_from = 0
         self.forward_trigger_liq = -1
         self.backward_trigger_liq = -1
         self.quanto = contract_params['quanto']
@@ -32,6 +32,12 @@ class Future_Handler(object):
         self.chase_level = contract_params['chase_level']
         self.forward_chase = False
         self.backward_chase = False
+        self.retreat = contract_params['retreat']
+        self.balance_rt = contract_params['balance_rt']
+        self.goods_rt = contract_params['goods_rt']
+        self.entry_gap_wait = contract_params['entry_gap_wait']
+        self.goods = 0.0
+        self.sleep_clear = False
 
     def get_flag(self):
         forward_accounts = forward_api_instance.list_futures_accounts(settle='btc',async_req=True)
@@ -71,11 +77,11 @@ class Future_Handler(object):
             self.forward_gap = (self.ask_1 - self.forward_entry_price)/self.forward_entry_price
         else:
             self.forward_gap = 0.0
-        if abs(self.forward_gap) > self.limit_gap:
+        if -self.forward_gap > self.limit_gap:
             self.forward_gap_alarm = True
         else:
             self.forward_gap_alarm = False
-        if abs(self.forward_gap) > self.follow_gap:
+        if -self.forward_gap > self.follow_gap:
             self.forward_follow_alarm = True
         else:
             self.forward_follow_alarm = False
@@ -83,27 +89,87 @@ class Future_Handler(object):
             self.backward_gap = (self.backward_entry_price - self.bid_1)/self.backward_entry_price
         else:
             self.backward_gap = 0.0
-        if abs(self.backward_gap) > self.limit_gap:
+        if -self.backward_gap > self.limit_gap:
             self.backward_gap_alarm = True
         else:
             self.backward_gap_alarm = False
-        if abs(self.backward_gap) > self.follow_gap:
+        if -self.backward_gap > self.follow_gap:
             self.backward_follow_alarm = True
         else:
             self.backward_follow_alarm = False
 
-        self.forward_total = self.forward_accounts._total
-        self.backward_total = self.backward_accounts._total
-        if self.forward_follow_alarm or self.backward_follow_alarm:
-            if not self.mark_total_flag:
-                self.mark_total = float(self.forward_total) + float(self.backward_total)
-                self.current_mark_total = self.mark_total
-            else: 
-                self.current_mark_total = float(self.forward_total) + float(self.backward_total)
-                self.balance_overflow = self.current_mark_total - self.mark_total
-            self.mark_total_flag = True
+        candlesticks=backward_api_instance.list_futures_candlesticks(contract=self.contract,settle='btc',limit=1,interval='5m')
+        if len(candlesticks) > 0:
+            h = float(candlesticks[0]._h)
+            l = float(candlesticks[0]._l)
+            if abs(h - l)/self.mark_price < 0.005:
+                self.stable_price = True
+            else:
+                self.stable_price = False
         else:
-            self.mark_total_flag = False
+            self.stable_price = False
+
+        if self.account_from == 0:
+            self.account_from = int(time.time())
+
+        if self.account_from > 0:
+            forward_account_book = forward_api_instance.list_futures_account_book(settle='btc',_from=self.account_from,type='pnl')
+            backward_account_book = backward_api_instance.list_futures_account_book(settle='btc',_from=self.account_from,type='pnl')
+            for item in forward_account_book:
+                if self.contract in item.text:
+                    self.goods += float(item.change)
+            for item in backward_account_book:
+                if self.contract in item.text:
+                    self.goods += float(item.change)
+            if len(forward_account_book)>0 or len(backward_account_book)>0:
+                t_f = 0
+                t_b = 0
+                if len(forward_account_book) > 0:
+                    t_f = int(forward_account_book[0]._time)
+                if len(backward_account_book) > 0:
+                    t_b = int(backward_account_book[0]._time)
+                if t_f > t_b:
+                    self.account_from = t_f + 1
+                else:
+                    self.account_from = t_b + 1
+                if self.retreat:
+                    if (self.forward_gap > 0.0 or self.forward_position_size == 0) and (self.backward_gap > 0.0 or self.backward_position_size == 0):
+                        self.goods = 0.0
+
+        self.balance_overflow = self.balance_rt * self.goods
+
+        entry_forward = self.forward_entry_price
+        entry_backward = self.backward_entry_price
+        if entry_forward == 0:
+            entry_forward = self.mark_price
+        if entry_backward == 0:
+            entry_backward = self.mark_price
+        entry_gap = abs(entry_forward - entry_backward)/self.mark_price
+
+        if self.forward_follow_alarm and self.backward_follow_alarm:
+            self.gap_balance = False
+        elif self.forward_follow_alarm and not self.backward_follow_alarm and entry_gap < self.entry_gap_wait:
+            if self.backward_entry_price == 0:
+                self.gap_balance = False
+            else:
+                forward_goods = float(self.forward_positions._value)*(self.ask_1-self.forward_entry_price)/self.forward_entry_price
+                backward_goods = float(self.backward_positions._value)*(self.backward_entry_price-self.bid_1)/self.backward_entry_price
+                if -backward_goods/forward_goods > self.goods_rt and self.stable_price:
+                    self.gap_balance = True
+                else:
+                    self.gap_balance = False
+        elif self.backward_follow_alarm and not self.forward_follow_alarm and entry_gap < self.entry_gap_wait:
+            if self.forward_entry_price == 0:
+                self.gap_balance = False
+            else:
+                forward_goods = float(self.forward_positions._value)*(self.ask_1-self.forward_entry_price)/self.forward_entry_price
+                backward_goods = float(self.backward_positions._value)*(self.backward_entry_price-self.bid_1)/self.backward_entry_price
+                if -forward_goods/backward_goods > self.goods_rt and self.stable_price:
+                    self.gap_balance = True
+                else:
+                    self.gap_balance = False
+        else:
+            self.gap_balance = True
 
         delta = self.forward_position_margin - self.backward_position_margin
         if delta >= self.limit_delta:
@@ -152,27 +218,15 @@ class Future_Handler(object):
 
         if self.chase:
             if self.forward_chase_margin > 0.0 and self.forward_position_margin < self.forward_chase_margin:
-                candlesticks=forward_api_instance.list_futures_candlesticks(contract=self.contract,settle='btc',limit=1,interval='5m')
-                if len(candlesticks) > 0:
-                    h = float(candlesticks[0]._h)
-                    l = float(candlesticks[0]._l)
-                    if abs(h - l)/self.mark_price < 0.005:
-                        self.forward_chase = True
-                    else:
-                        self.forward_chase = False
+                if self.stable_price and not self.forward_delta_alarm:
+                    self.forward_chase = True
                 else:
                     self.forward_chase = False
             else:
                 self.forward_chase = False
             if self.backward_chase_margin > 0.0 and self.backward_position_margin < self.backward_chase_margin:
-                candlesticks=backward_api_instance.list_futures_candlesticks(contract=self.contract,settle='btc',limit=1,interval='5m')
-                if len(candlesticks) > 0:
-                    h = float(candlesticks[0]._h)
-                    l = float(candlesticks[0]._l)
-                    if abs(h - l)/self.mark_price < 0.005:
-                        self.backward_chase = True
-                    else:
-                        self.backward_chase = False
+                if self.stable_price and not self.backward_delta_alarm:
+                    self.backward_chase = True
                 else:
                     self.backward_chase = False
             else:
@@ -185,11 +239,11 @@ class Future_Handler(object):
             self.forward_trigger_liq = 0
         if self.backward_position_size == 0:
             self.backward_trigger_liq = 0
-        if self.forward_position_size > 0 and (self.forward_trigger_liq < 0 or (self.forward_trigger_liq <= (1.0+1.0/self.forward_leverage*0.05)*self.forward_liq_price or self.forward_trigger_liq >= (1.0+1.0/self.forward_leverage*0.2)*self.forward_liq_price)):
+        if self.forward_position_size > 0 and self.forward_liq_price < self.mark_price and (self.forward_trigger_liq < 0 or (self.forward_trigger_liq <= (1.0+1.0/self.forward_leverage*0.05)*self.forward_liq_price or self.forward_trigger_liq >= (1.0+1.0/self.forward_leverage*0.2)*self.forward_liq_price)):
             self.forward_liq_flag = True
         else:
             self.forward_liq_flag = False
-        if self.backward_position_size < 0 and (self.backward_trigger_liq < 0 or (self.backward_trigger_liq <= (1.0-1.0/self.backward_leverage*0.2)*self.backward_liq_price or self.backward_trigger_liq >= (1.0-1.0/self.backward_leverage*0.05)*self.backward_liq_price)):
+        if self.backward_position_size < 0 and self.backward_liq_price > self.mark_price and (self.backward_trigger_liq < 0 or (self.backward_trigger_liq <= (1.0-1.0/self.backward_leverage*0.2)*self.backward_liq_price or self.backward_trigger_liq >= (1.0-1.0/self.backward_leverage*0.05)*self.backward_liq_price)):
             self.backward_liq_flag = True
         else:
             self.backward_liq_flag = False
@@ -216,44 +270,49 @@ class Future_Handler(object):
             elif order_size < 0:
                 forward_reduce_clear = True
             if order_size > 0:
-                if (self.forward_position_alarm or self.forward_delta_alarm or self.forward_follow_alarm or self.forward_gap_alarm) and not self.forward_chase:
+                if (self.forward_position_alarm or self.forward_delta_alarm) and not self.forward_chase and not (not self.gap_balance and not self.forward_delta_alarm):
                     forward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
                 else:
                     if self.bid_1 > order_price:
                         forward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
                         forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = self.tap * self.forward_leverage, price = self.bid_1,tif='poc'))
             elif order_size < 0:
-                if self.ask_1 < self.forward_entry_price:
-                    if self.forward_gap_alarm:
+                if self.gap_balance:
+                    if self.ask_1 < self.forward_entry_price:
+                        if self.forward_follow_alarm and order_price > self.ask_1:
+                            if self.balance_overflow > 0.0:
+                                forward_pnl = float(self.forward_positions._value)*(self.forward_entry_price-self.ask_1)/self.forward_entry_price
+                                _size = min(int(self.forward_position_size * (self.balance_overflow/abs(forward_pnl))),self.forward_position_size)
+                                if _size > 0:
+                                    forward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
+                                    forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.ask_1,tif='poc'))
+                        elif order_price >= self.forward_entry_price and self.ask_1 < self.forward_entry_price*(1 - self.balance_gap):
+                            forward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
+                    elif self.ask_1 >= self.forward_entry_price and order_price > self.ask_1:
                         forward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
-                    elif self.forward_follow_alarm:
-                        if self.balance_overflow > 10.0:
-                            un_pnl = float(self.forward_positions._unrealised_pnl)
-                            _size = min(int(self.forward_position_size * (self.balance_overflow/abs(un_pnl)/self.N_contract)),self.forward_position_size)
-                            if _size > 0 and order_price > self.ask_1:
-                                forward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
-                                forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.ask_1,tif='poc'))
-                    elif order_price >= self.forward_entry_price and self.ask_1 < self.forward_entry_price*(1 - self.balance_gap):
-                        forward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
-                elif self.ask_1 >= self.forward_entry_price and order_price > self.ask_1:
+                        if self.forward_position_size > 0:
+                            forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size=-self.forward_position_size,reduce_only=True, price = self.ask_1,tif='poc'))
+                else:
                     forward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
-                    if self.forward_position_size > 0:
-                        forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size=-self.forward_position_size,reduce_only=True, price = self.ask_1,tif='poc'))
         if not forward_increase_clear:
-            if (not self.forward_position_alarm and not self.forward_delta_alarm and not self.forward_follow_alarm and not self.forward_gap_alarm) or self.forward_chase:
+            if self.stable_price and ((not self.forward_position_alarm and not self.forward_delta_alarm) or (not self.gap_balance and not self.forward_delta_alarm) or self.forward_chase):
                 forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = self.tap * self.forward_leverage, price = self.bid_1,tif='poc'))
-        if not forward_reduce_clear:
+        if not forward_reduce_clear and self.gap_balance:
             if self.ask_1 >= self.forward_entry_price and self.forward_position_size > 0:
                 forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size=-self.forward_position_size,reduce_only=True, price = self.ask_1,tif='poc'))
             elif self.ask_1 >= self.forward_entry_price*(1 - self.balance_gap) and self.forward_position_size > 0:
                 forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size=-self.forward_position_size,reduce_only=True, price = self.forward_entry_price*(1 + self.profit_gap), tif='poc'))
-            elif not self.forward_gap_alarm and self.forward_follow_alarm and self.ask_1 < self.forward_entry_price:
-                if self.balance_overflow > 10.0:
-                    un_pnl = float(self.forward_positions._unrealised_pnl)
-                    _size = min(int(self.forward_position_size * (self.balance_overflow/abs(un_pnl)/self.N_contract)),self.forward_position_size)
+            elif self.forward_follow_alarm:
+                if self.balance_overflow > 0.0:
+                    forward_pnl = float(self.forward_positions._value)*(self.forward_entry_price-self.ask_1)/self.forward_entry_price
+                    _size = min(int(self.forward_position_size * (self.balance_overflow/abs(forward_pnl))),self.forward_position_size)
                     if _size > 0:
-                        forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.ask_1,tif='poc'))
-
+                        if self.sleep_clear:
+                            forward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.ask_1,tif='poc'))
+                            self.sleep_clear = False
+                        else:
+                            time.sleep(10)
+                            self.sleep_clear = True
 
         self.backward_orders = backward_api_instance.list_futures_orders(contract=self.contract,settle='btc',status='open')
         backward_increase_clear = False
@@ -267,43 +326,49 @@ class Future_Handler(object):
             elif order_size > 0:
                 backward_reduce_clear = True
             if order_size < 0:
-                if (self.backward_position_alarm or self.backward_delta_alarm or self.backward_follow_alarm or self.backward_gap_alarm) and not self.backward_chase:
+                if (self.backward_position_alarm or self.backward_delta_alarm) and not self.backward_chase and not (not self.gap_balance and not self.backward_delta_alarm):
                     backward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
                 else:
                     if self.ask_1 < order_price:
                         backward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
                         backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -self.tap * self.backward_leverage, price = self.ask_1,tif='poc'))
             elif order_size > 0:
-                if self.bid_1 > self.backward_entry_price:
-                    if self.backward_gap_alarm:
+                if self.gap_balance:
+                    if self.bid_1 > self.backward_entry_price:
+                        if self.backward_follow_alarm and order_price < self.bid_1:
+                            if self.balance_overflow > 0.0:
+                                backward_pnl = float(self.backward_positions._value)*(self.bid_1-self.backward_entry_price)/self.backward_entry_price
+                                _size = max(int(self.backward_position_size * (self.balance_overflow/abs(backward_pnl))),self.backward_position_size)
+                                if _size < 0:
+                                    backward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
+                                    backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.bid_1,tif='poc'))
+                        elif order_price <= self.backward_entry_price and self.bid_1 > self.backward_entry_price*(1 + self.balance_gap):
+                            backward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
+                    elif self.bid_1 <= self.backward_entry_price and order_price < self.bid_1:
                         backward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
-                    elif self.backward_follow_alarm:
-                        if self.balance_overflow > 10.0:
-                            un_pnl = float(self.backward_positions._unrealised_pnl)
-                            _size = max(int(self.backward_position_size * (self.balance_overflow/abs(un_pnl)/self.N_contract)),self.backward_position_size)
-                            if order_price < self.bid_1 and _size < 0:
-                                backward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
-                                backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.bid_1,tif='poc'))
-                    elif order_price <= self.backward_entry_price and self.bid_1 > self.backward_entry_price*(1 + self.balance_gap):
-                        backward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
-                elif self.bid_1 <= self.backward_entry_price and order_price < self.bid_1:
+                        if self.backward_position_size < 0:
+                            backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size=-self.backward_position_size,reduce_only=True, price = self.bid_1,tif='poc'))
+                else:
                     backward_api_instance.cancel_futures_order(settle='btc',order_id=order_id)
-                    if self.backward_position_size < 0:
-                        backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size=-self.backward_position_size,reduce_only=True, price = self.bid_1,tif='poc'))
         if not backward_increase_clear:
-            if (not self.backward_position_alarm and not self.backward_delta_alarm and not self.backward_follow_alarm and not self.backward_gap_alarm) or self.backward_chase:
+            if self.stable_price and ((not self.backward_position_alarm and not self.backward_delta_alarm) or (not self.gap_balance and not self.backward_delta_alarm) or self.backward_chase):
                 backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -self.tap * self.backward_leverage, price = self.ask_1,tif='poc'))
-        if not backward_reduce_clear:
+        if not backward_reduce_clear and self.gap_balance:
             if self.bid_1 <= self.backward_entry_price and self.backward_position_size < 0:
                 backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size=-self.backward_position_size,reduce_only=True, price = self.bid_1,tif='poc'))
             elif self.bid_1 <= self.backward_entry_price*(1 + self.balance_gap) and self.backward_position_size < 0:
                 backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size=-self.backward_position_size,reduce_only=True, price = self.backward_entry_price*(1 - self.profit_gap), tif='poc'))
-            elif not self.backward_gap_alarm and self.backward_follow_alarm and self.bid_1 > self.backward_entry_price:
-                if self.balance_overflow > 10.0:
-                    un_pnl = float(self.backward_positions._unrealised_pnl)
-                    _size = max(int(self.backward_position_size * (self.balance_overflow/abs(un_pnl)/self.N_contract)),self.backward_position_size)
+            elif self.backward_follow_alarm:
+                if self.balance_overflow > 0.0:
+                    backward_pnl = float(self.backward_positions._value)*(self.bid_1-self.backward_entry_price)/self.backward_entry_price
+                    _size = max(int(self.backward_position_size * (self.balance_overflow/abs(backward_pnl))),self.backward_position_size)
                     if _size < 0:
-                        backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.bid_1,tif='poc'))
+                        if self.sleep_clear:
+                            backward_api_instance.create_futures_order(settle='btc',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.bid_1,tif='poc'))
+                            self.sleep_clear = False
+                        else:
+                            time.sleep(10)
+                            self.sleep_clear = True
 
         if self.forward_liq_flag:
             forward_api_instance.cancel_price_triggered_order_list(contract=self.contract,settle='btc')
