@@ -24,10 +24,7 @@ class Future_Handler(object):
         self.limit_size_std = contract_params['limit_size_std']
         self.max_size = contract_params['max_size']
         self.size_rt = contract_params['size_rt']
-        self.follow_gap = contract_params['follow_gap']
         self.follow_gap_rt = contract_params['follow_gap_rt']
-        self.balance_gap = contract_params['balance_gap']
-        self.profit_gap = contract_params['profit_gap']
         self.mark_total_flag = False
         self.balance_overflow = 0
         self.forward_account_from = 0
@@ -49,8 +46,6 @@ class Future_Handler(object):
         self.backward_gap_balance = True
         self.retreat = contract_params['retreat']
         self.balance_rt = contract_params['balance_rt']
-        self.goods_rt_std = contract_params['goods_rt_std']
-        self.goods_para = contract_params['goods_para']
         self.goods = 0.0
         self.forward_goods = 0.0
         self.backward_goods = 0.0
@@ -247,10 +242,10 @@ class Future_Handler(object):
         self.forward_gap_balance = False
         self.backward_gap_balance = False
         if self.forward_follow_alarm and self.backward_follow_alarm:
-            if self.forward_position_size < abs(self.backward_position_size):
+            if self.forward_position_size > abs(self.backward_position_size):
                 if -self.balance_overflow/self.forward_goods > 1.0 - self.T_std and self.forward_stable_price:
                     self.forward_gap_balance = True
-            elif self.forward_position_size > abs(self.backward_position_size):
+            elif self.forward_position_size < abs(self.backward_position_size):
                 if -self.balance_overflow/self.backward_goods > 1.0 - self.T_std and self.backward_stable_price:
                     self.backward_gap_balance = True
         elif self.forward_follow_alarm and not self.backward_follow_alarm:
@@ -354,23 +349,23 @@ class Future_Handler(object):
 #                    if not self.backward_gap_balance and (self._S > self.catch_neg_rt * self.goods_rt or 1.0/self._T < self.T_std) and self.backward_stable_price:
                     if not self.backward_gap_balance and self.backward_stable_price:
                         self.forward_catch = True
-                        self.forward_catch_size = int(min(max(self.tap*self.forward_leverage,(abs(self.backward_position_size)/self.T_-self.forward_position_size)*min(1.0,self._T)),self.forward_limit-self.forward_position_size))
-                else:
+                        self.forward_catch_size = int(min(max(self.tap*self.forward_leverage,(-self.backward_position_size/self.T_-self.forward_position_size)),self.forward_limit-self.forward_position_size))
+                elif self._T < self.T_std:
 #                    if not self.forward_gap_balance and (self._S < self.catch_pos_rt * self.goods_rt or self._T < self.T_std) and self.forward_stable_price:
                     if not self.forward_gap_balance and self.forward_stable_price:
                         self.backward_catch = True
-                        self.backward_catch_size = int(max(min(-self.tap*self.backward_leverage,max(-1.0,self._T-self.T_)*(self.forward_position_size*self.T_+self.backward_position_size)),-self.backward_limit-self.backward_position_size))
+                        self.backward_catch_size = int(max(min(-self.tap*self.backward_leverage,(-self.forward_position_size*self.T_-self.backward_position_size)),-self.backward_limit-self.backward_position_size))
             elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
                 if self._T > self.T_:
 #                    if not self.forward_gap_balance and (self._S > self.catch_neg_rt * self.goods_rt or 1.0/self._T < self.T_std) and self.forward_stable_price:
                     if not self.forward_gap_balance and self.forward_stable_price:
                         self.backward_catch = True
-                        self.backward_catch_size = int(max(min(-self.tap*self.backward_leverage,(self.forward_position_size/self.T_+self.backward_position_size)*min(1.0,self._T)),-self.backward_limit-self.backward_position_size))
-                else:
+                        self.backward_catch_size = int(max(min(-self.tap*self.backward_leverage,(-self.forward_position_size/self.T_-self.backward_position_size)),-self.backward_limit-self.backward_position_size))
+                elif self._T < self.T_std:
 #                    if not self.backward_gap_balance and (self._S < self.catch_pos_rt * self.goods_rt or self._T < self.T_std) and self.backward_stable_price:
                     if not self.backward_gap_balance and self.backward_stable_price:
                         self.forward_catch = True
-                        self.forward_catch_size = int(min(max(self.tap*self.forward_leverage,max(-1.0,self._T-self.T_)*(self.backward_position_size*self.T_+self.forward_position_size)),self.forward_limit-self.forward_position_size))
+                        self.forward_catch_size = int(min(max(self.tap*self.forward_leverage,(-self.backward_position_size*self.T_-self.forward_position_size)),self.forward_limit-self.forward_position_size))
             elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
                 if self.forward_position_size > abs(self.backward_position_size) and not self.forward_gap_balance:
                     self.backward_catch = True
@@ -432,8 +427,6 @@ class Future_Handler(object):
                                 _size = int(min(self.forward_position_size * (self.balance_overflow/abs(self.forward_goods)),self.forward_position_size+self.backward_position_size*self.T_std))
                                 if _size >= 1:
                                     forward_api_instance.create_futures_order(settle='usdt',futures_order=FuturesOrder(contract=self.contract,size =-_size, price = self.ask_1,tif='poc'))
-                        elif order_price >= self.forward_entry_price and self.ask_1 < self.forward_entry_price*(1 - self.balance_gap):
-                            forward_api_instance.cancel_futures_order(settle='usdt',order_id=order_id)
                     elif self.ask_1 >= self.forward_entry_price and order_price > self.ask_1 and self.forward_position_size > 0:
                         forward_api_instance.cancel_futures_order(settle='usdt',order_id=order_id)
                         _size = max(int(-self.forward_position_size-self.backward_position_size*self.T_std),-self.forward_position_size)
@@ -463,8 +456,6 @@ class Future_Handler(object):
                     else:
                         time.sleep(30)
                         self.sleep_clear = True
-            elif self.ask_1 >= self.forward_entry_price*(1 - self.balance_gap) and self.forward_position_size > 0:
-                forward_api_instance.create_futures_order(settle='usdt',futures_order=FuturesOrder(contract=self.contract,size=-self.forward_position_size,price = self.forward_entry_price*(1 + self.profit_gap), tif='poc'))
 
         self.backward_orders = backward_api_instance.list_futures_orders(contract=self.contract,settle='usdt',status='open')
         backward_increase_clear = False
@@ -496,8 +487,6 @@ class Future_Handler(object):
                                 _size = max(self.backward_position_size * (self.balance_overflow/abs(self.backward_goods)),self.backward_position_size+self.forward_position_size*self.T_std)
                                 if _size <= -1:
                                     backward_api_instance.create_futures_order(settle='usdt',futures_order=FuturesOrder(contract=self.contract,size = -_size, price = self.bid_1,tif='poc'))
-                        elif order_price <= self.backward_entry_price and self.bid_1 > self.backward_entry_price*(1 + self.balance_gap):
-                            backward_api_instance.cancel_futures_order(settle='usdt',order_id=order_id)
                     elif self.bid_1 <= self.backward_entry_price and order_price < self.bid_1 and self.backward_position_size < 0:
                         backward_api_instance.cancel_futures_order(settle='usdt',order_id=order_id)
                         _size = min(int(-self.backward_position_size-self.forward_position_size*self.T_std),-self.backward_position_size)
@@ -527,8 +516,6 @@ class Future_Handler(object):
                     else:
                         time.sleep(30)
                         self.sleep_clear = True
-            elif self.bid_1 <= self.backward_entry_price*(1 + self.balance_gap) and self.backward_position_size < 0:
-                backward_api_instance.create_futures_order(settle='usdt',futures_order=FuturesOrder(contract=self.contract,size=-self.backward_position_size,price = self.backward_entry_price*(1 - self.profit_gap), tif='poc'))
 
         if self.forward_liq_flag:
             forward_api_instance.cancel_price_triggered_order_list(contract=self.contract,settle='usdt')
