@@ -5,6 +5,8 @@ import requests
 import time
 import json
 import gate_api
+import sympy
+from sympy import solve,symbols,log
 from gate_api.rest import ApiException
 
 # smtplib模块负责连接服务器和发送邮件
@@ -60,7 +62,17 @@ def send_weixin(msg):
 	requests.get("https://sc.ftqq.com/SCU60300T026729377fffbccacceb5c62ab430d7f5d78a7743d03a.send?text={}&desp={}".format('告警', str(N_message)+' '+str(msg)))
 	time.sleep(3)
 
-
+def regression(Pf,Pb,Sf,Sb,P):
+    x = symbols('x')
+    a = -0.5 * float(Sf) * float(P - Pf) / float(P - Pb)
+    b = log(Sb)
+    s = solve(a/x - log(x) + b)
+    res = 0
+    for _s in s:
+        if sympy.im(_s) == 0 and _s > Sf and _s <= Sb:
+            res = int (_s - Sf)
+            break
+    return res 
 
 forward_configuration = gate_api.Forward_Configuration()
 backward_configuration = gate_api.Backward_Configuration()
