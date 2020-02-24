@@ -62,15 +62,27 @@ def send_weixin(msg):
 	requests.get("https://sc.ftqq.com/SCU60300T026729377fffbccacceb5c62ab430d7f5d78a7743d03a.send?text={}&desp={}".format('告警', str(N_message)+' '+str(msg)))
 	time.sleep(3)
 
-def regression(Pf,Pb,Sf,Sb,P):
+def regression_1(Pf,Pb,Sf,Sb,P,T_rt):
     x = symbols('x')
-    a = -0.5 * float(Sf) * float(P - Pf) / float(P - Pb)
+    a = -T_rt * float(Sf) * float(P - Pf) / float(P - Pb)
     b = log(Sb)
     s = solve(a/x - log(x) + b)
     res = 0
     for _s in s:
         if sympy.im(_s) == 0 and _s > Sf and _s <= Sb:
-            res = int (_s - Sf)
+            res = _s.evalf() - Sf
+            break
+    return res
+
+def regression_2(Pf,Pb,Sf,Sb,P,T_rt):
+    x = symbols('x')
+    a = -T_rt * float(P - Pf) / float(P - Pb) / float(Sb)
+    b = log(Sf)
+    s = solve(a*x + log(x) - b)
+    res = 0
+    for _s in s:
+        if sympy.im(_s) == 0 and _s > Sb and _s >= Sf:
+            res = _s.evalf() - Sb
             break
     return res 
 
