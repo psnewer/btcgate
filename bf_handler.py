@@ -29,13 +29,16 @@ class Future_Handler(object):
         self.quanto = contract_params['quanto']
         self.catch = contract_params['catch']
         self.T_limit = contract_params['T_limit']
+        self.T_rt = contract_params['T_rt']
+        self.T_tr = contract_params['T_tr']
+        self.T_tr_cmp = contract_params['T_tr_cmp']
         self.forward_catch = False
         self.backward_catch = False
         self.forward_gap_balance = True
         self.backward_gap_balance = True
         self.retreat = contract_params['retreat']
         self.balance_rt = contract_params['balance_rt']
-        self.goods = 0.055532655633
+        self.goods = 0.0
         self.forward_goods = 0.0
         self.backward_goods = 0.0
         self.sleep_clear = False
@@ -109,7 +112,7 @@ class Future_Handler(object):
         else:
             self.forward_stable_price = False
             self.backward_stable_price = False
-        print (len(candlesticks))
+
         if self.forward_account_from == 0:
             self.forward_account_from = int(time.time())
         if self.backward_account_from == 0:
@@ -179,10 +182,10 @@ class Future_Handler(object):
                 self.T_ = 1.0
                 self.T_cmp = 1.0
             else:
-                self.goods_rt = math.exp((self.backward_entry_price-self.bid_1)/(self.bid_1-self.forward_entry_price))/self._T
-                self.T_std = math.exp(0.5 * ((self.backward_entry_price-self.bid_1)/(self.bid_1-self.forward_entry_price)))
-                self.T_cmp = math.exp(0.375 * ((self.backward_entry_price-self.bid_1)/(self.bid_1-self.forward_entry_price)))
-                self.T_ = math.exp(0.25 * ((self.backward_entry_price-self.bid_1)/(self.bid_1-self.forward_entry_price)))
+                self.goods_rt = pow(max(0.0,1.0 + self.T_rt*(self.backward_entry_price-self.bid_1)/(self.bid_1-self.forward_entry_price)),0.5)/self._T
+                self.T_std = pow(max(0.0,1.0 + self.T_rt*(self.backward_entry_price-self.bid_1)/(self.bid_1-self.forward_entry_price)),0.5)
+                self.T_cmp = pow(max(0.0,self.T_tr_cmp + self.T_rt*(self.backward_entry_price-self.bid_1)/(self.bid_1-self.forward_entry_price)),0.5)
+                self.T_ = pow(max(0.0,self.T_tr + self.T_rt*(self.backward_entry_price-self.bid_1)/(self.bid_1-self.forward_entry_price)),0.5)
         elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
             if self._T == 0.0:
                 self.goods_rt = 1.0
@@ -190,10 +193,10 @@ class Future_Handler(object):
                 self.T_ = 1.0
                 self.T_cmp = 1.0
             else:
-                self.goods_rt = math.exp((self.ask_1-self.forward_entry_price)/(self.backward_entry_price-self.ask_1))/self._T
-                self.T_std = math.exp(0.5* ((self.ask_1-self.forward_entry_price)/(self.backward_entry_price-self.ask_1)))
-                self.T_cmp = math.exp(0.375 * ((self.ask_1-self.forward_entry_price)/(self.backward_entry_price-self.ask_1)))
-                self.T_ = math.exp(0.25 * ((self.ask_1-self.forward_entry_price)/(self.backward_entry_price-self.ask_1)))
+                self.goods_rt = pow(max(0.0,1.0 + self.T_rt*(self.ask_1-self.forward_entry_price)/(self.backward_entry_price-self.ask_1)),0.5)/self._T
+                self.T_std = pow(max(0.0,1.0 + self.T_rt*(self.ask_1-self.forward_entry_price)/(self.backward_entry_price-self.ask_1)),0.5)
+                self.T_cmp = pow(max(0.0,self.T_tr_cmp + self.T_rt*(self.ask_1-self.forward_entry_price)/(self.backward_entry_price-self.ask_1)),0.5)
+                self.T_ = pow(max(0.0,self.T_tr + self.T_rt*(self.ask_1-self.forward_entry_price)/(self.backward_entry_price-self.ask_1)),0.5)
         elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
             self.goods_rt = 1.0
             self.T_std = 1.0
@@ -303,17 +306,17 @@ class Future_Handler(object):
 #                            self.backward_gap_balance = False
 #                            self.forward_catch_size = int(min((-self.backward_position_size/self.T_std-self.forward_position_size),self.forward_limit-self.forward_position_size))
 #                    else:
-                    if self.backward_stable_price and self.T_std > self.T_limit:
+                    if self.backward_stable_price and self._T > self.T_limit:
                         self.forward_catch = True
                         self.backward_gap_balance = False
-                        regression_size = max(1.0,regression_2(self.backward_entry_price,self.forward_entry_price,-self.backward_position_size,self.forward_position_size,self.bid_1,0.5))
+                        regression_size = max(1.0,regression_2(self.backward_entry_price,self.forward_entry_price,-self.backward_position_size,self.forward_position_size,self.bid_1,1.0,self.T_rt))
 #                        self.forward_catch_size = int(min(-self.backward_position_size/self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
                         self.forward_catch_size = int(min(regression_size,self.forward_limit-self.forward_position_size))
                         print ('1111',regression_size)
                 elif self._T < self.T_std:
                     if self.forward_stable_price and not self.forward_gap_balance:
                         self.backward_catch = True
-                        regression_size = regression_1(self.backward_entry_price,self.forward_entry_price,-self.backward_position_size,self.forward_position_size,self.ask_1,0.25)
+                        regression_size = regression_1(self.backward_entry_price,self.forward_entry_price,-self.backward_position_size,self.forward_position_size,self.ask_1,self.T_tr,self.T_rt)
                         self.backward_catch_size = int(max(-regression_size,-self.backward_limit-self.backward_position_size))
                         print ('bbbb',regression_size)
             elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
@@ -324,17 +327,17 @@ class Future_Handler(object):
 #                            self.forward_gap_balance = False
 #                            self.backward_catch_size = int(max((-self.forward_position_size/self.T_std-self.backward_position_size),-self.backward_limit-self.backward_position_size))
 #                    else:
-                    if self.forward_stable_price and self.T_std > self.T_limit:
+                    if self.forward_stable_price and self._T > self.T_limit:
                         self.backward_catch = True
                         self.forward_gap_balance = False
-                        regression_size = max(1.0,regression_2(self.forward_entry_price,self.backward_entry_price,self.forward_position_size,-self.backward_position_size,self.ask_1,0.5))
+                        regression_size = max(1.0,regression_2(self.forward_entry_price,self.backward_entry_price,self.forward_position_size,-self.backward_position_size,self.ask_1,1.0,self.T_rt))
  #                       self.backward_catch_size = int(max(-self.forward_position_size/self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
                         self.backward_catch_size = int(max(-regression_size,-self.backward_limit-self.backward_position_size))
                         print ('2222',regression_size)
                 elif self._T < self.T_std:
                     if self.backward_stable_price and not self.backward_gap_balance:
                         self.forward_catch = True
-                        regression_size = regression_1(self.forward_entry_price,self.backward_entry_price,self.forward_position_size,-self.backward_position_size,self.bid_1,0.25)
+                        regression_size = regression_1(self.forward_entry_price,self.backward_entry_price,self.forward_position_size,-self.backward_position_size,self.bid_1,self.T_tr,self.T_rt)
                         self.forward_catch_size = int(min(regression_size,(-self.backward_position_size*self.T_-self.forward_position_size),self.forward_limit-self.forward_position_size))
                         print ('cccc',regression_size)
             elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
