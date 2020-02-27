@@ -6,7 +6,7 @@ import time
 import json
 import gate_api
 import sympy
-from scipy.optimize import fsolve
+from sympy import solve,symbols,log
 from gate_api.rest import ApiException
 
 # smtplib模块负责连接服务器和发送邮件
@@ -62,38 +62,32 @@ def send_weixin(msg):
 	requests.get("https://sc.ftqq.com/SCU60300T026729377fffbccacceb5c62ab430d7f5d78a7743d03a.send?text={}&desp={}".format('告警', str(N_message)+' '+str(msg)))
 	time.sleep(3)
 
-def regression_1(Pf,Pb,Sf,Sb,P,T_tr,T_rt):
-    def func(x):
-        return (T_tr-T_rt*(P-(P*x+Pf*Sf)/(x+Sf))/(P-Pb))**0.5 - (Sf+x)/Sb
-#    x = symbols('x')
-#    P_t = (Pf*Sf + P*x)/(x+Sf)
-#    a = float(P - Pb)
-#    b = float(P - Pf)
-#    s = solve(a*(x**3) - a*T_tr*Sb*Sb*x + b*Sb*Sb*Sf)
-    s = fsolve(func,1.0)
+def regression_1(Pf,Pb,Sf,Sb,P,T_rt):
+    x = symbols('x')
+    a = -T_rt * float(Sf) * float(P - Pf) / float(P - Pb)
+    b = log(Sb)
+    s = solve(a/x - log(x) + b)
     print (s)
     res = 0
     for _s in s:
-        if _s > 0 and _s + Sf <= Sb:
-            res = _s
-            break
+        if sympy.im(_s) == 0 and _s > Sf and _s <= Sb:
+            if _s.evalf() - Sf >= res:
+                res = _s.evalf() - Sf
+#            break
     return res
 
-def regression_2(Pf,Pb,Sf,Sb,P,T_tr,T_rt):
-    def func(x):
-        return (T_tr-T_rt*(P-Pf)/(P-(Pb*Sb+P*x)/(x+Sb)))**0.5 - Sf/(Sb+x)
-#    x = symbols('x')
-#    P_t = (Pb*Sb + P*x)/(x+Sb)
-#    a = float(P - Pb)
-#    b = float(P - Pf)
-#    s = solve(b*(x**3) - a*T_tr*Sb*(x**2) + a*Sb*Sf*Sf)
-    s = fsolve(func,1.0)
+def regression_2(Pf,Pb,Sf,Sb,P,T_rt):
+    x = symbols('x')
+    a = -T_rt * float(P - Pf) / float(P - Pb) / float(Sb)
+    b = log(Sf)
+    s = solve(a*x + log(x) - b)
     print (s)
     res = 0
     for _s in s:
-        if _s > 0 and _s + Sb >= Sf:
-            res = _s
-            break
+        if sympy.im(_s) == 0 and _s > Sb and _s >= Sf:
+            if _s.evalf() - Sb >= res:
+                res = _s.evalf() - Sb
+ #           break
     return res 
 
 forward_configuration = gate_api.Forward_Configuration()
