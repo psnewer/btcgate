@@ -70,10 +70,10 @@ def regression_1(Pf,Pb,Sf,Sb,P,T_rt):
     print (s)
     res = 0
     for _s in s:
-        if sympy.im(_s) == 0 and _s > Sf and _s <= Sb:
-            if _s.evalf() - Sf >= res:
-                res = _s.evalf() - Sf
-#            break
+        if sympy.im(_s) == 0 and _s > Sf:
+#            if _s.evalf() - Sf >= res:
+            res = _s.evalf() - Sf
+            break
     return res
 
 def regression_2(Pf,Pb,Sf,Sb,P,T_rt):
@@ -84,10 +84,10 @@ def regression_2(Pf,Pb,Sf,Sb,P,T_rt):
     print (s)
     res = 0
     for _s in s:
-        if sympy.im(_s) == 0 and _s > Sb and _s >= Sf:
-            if _s.evalf() - Sb >= res:
-                res = _s.evalf() - Sb
- #           break
+        if sympy.im(_s) == 0 and _s > Sb:
+#            if _s.evalf() - Sb >= res:
+            res = _s.evalf() - Sb
+            break
     return res 
 
 forward_configuration = gate_api.Forward_Configuration()
