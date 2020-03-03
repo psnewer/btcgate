@@ -44,6 +44,8 @@ class Future_Handler(object):
         self.size_rt = 1
         self.T_price = -1
         self.sleep_clear = False
+        self.forward_balance_size = 0
+        self.backward_balance_size = 0
 
     def get_flag(self):
         forward_accounts = forward_api_instance.list_futures_accounts(settle='usdt',async_req=True)
@@ -272,12 +274,12 @@ class Future_Handler(object):
 
         if self.forward_gap_balance:
             if self.forward_gap >= 0.0:
-                self.forward_balance_size = int(max(min(-1.0,-self.forward_position_size-self.backward_position_size*self.T_std),-self.forward_position_size))
+                self.forward_balance_size = int(max(-self.forward_position_size-self.backward_position_size*self.T_std,-self.forward_position_size))
             else:
                 self.forward_balance_size = int(max(self.forward_position_size * (self.balance_overflow/self.forward_goods),-self.forward_position_size-self.backward_position_size/self.T_std))
         if self.backward_gap_balance:
             if self.backward_gap >= 0.0:
-                self.backward_balance_size = int(min(max(1.0,-self.backward_position_size-self.forward_position_size*self.T_std),-self.backward_position_size))
+                self.backward_balance_size = int(min(-self.backward_position_size-self.forward_position_size*self.T_std,-self.backward_position_size))
             else:
                 self.backward_balance_size = int(min(self.backward_position_size * (self.balance_overflow/self.backward_goods),-self.backward_position_size-self.forward_position_size/self.T_std))
 
@@ -359,20 +361,21 @@ class Future_Handler(object):
 #                            self.backward_gap_balance = False
 #                            self.forward_catch_size = int(min((-self.backward_position_size/self.T_std-self.forward_position_size),self.forward_limit-self.forward_position_size))
 #                    else:
-                    if self.backward_stable_price and self.bid_1 <= self.T_price:
+                    if self.backward_stable_price and (self.bid_1 <= self.T_price or self.T_price == -1):
                         self.forward_catch = True
                         self.backward_gap_balance = False
-                        regression_size = max(1.0,regression_2(self.backward_entry_price,self.forward_entry_price,-self.backward_position_size,self.forward_position_size,self.bid_1,-0.5*self.gra_T_std*self.t_foc,0.5*self.gra_T_std))
-#                        self.forward_catch_size = int(min(-self.backward_position_size/self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
-                        self.forward_catch_size = int(min(regression_size,self.forward_limit-self.forward_position_size))
+                        regression_size = regression_2(self.backward_entry_price,self.forward_entry_price,-self.backward_position_size,self.forward_position_size,self.bid_1,-0.5*self.gra_T_std*self.t_foc,0.5*self.gra_T_std)
+                        self.forward_catch_size = int(min(-self.backward_position_size/self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
+#                        self.forward_catch_size = int(min(regression_size,self.forward_limit-self.forward_position_size))
                         self.T_price = self.bid_1
-                        print ('1111',regression_size)
+                        print ('1111',self.backward_balance_size,-self.backward_position_size/self.T_std-self.forward_position_size)
                 elif self._T < self.T_std:
                     if self.forward_stable_price and not self.forward_gap_balance:
                         self.backward_catch = True
-                        regression_size = max(1.0,regression_1(self.backward_entry_price,self.forward_entry_price,-self.backward_position_size,self.forward_position_size,self.ask_1,-0.5*self.gra_T_*self.t_foc,0.5*self.gra_T_))
-                        self.backward_catch_size = int(max(-regression_size,-self.backward_limit-self.backward_position_size))
-                        print ('bbbb',regression_size)
+                        regression_size = regression_1(self.backward_entry_price,self.forward_entry_price,-self.backward_position_size,self.forward_position_size,self.ask_1,-0.5*self.gra_T_*self.t_foc,0.5*self.gra_T_)
+#                        self.backward_catch_size = int(max(-regression_size,-self.backward_limit-self.backward_position_size))
+                        self.backward_catch_size = int(max(-self.forward_position_size*self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
+                        print ('bbbb',self.forward_balance_size,-self.forward_position_size*self.T_std-self.backward_position_size)
             elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
                 if self._T > self.T_std:
 #                    if self.forward_position_size >= self.limit_size:
@@ -381,19 +384,20 @@ class Future_Handler(object):
 #                            self.forward_gap_balance = False
 #                            self.backward_catch_size = int(max((-self.forward_position_size/self.T_std-self.backward_position_size),-self.backward_limit-self.backward_position_size))
 #                    else:
-                    if self.forward_stable_price and self.ask_1 >= self.T_price:
+                    if self.forward_stable_price and (self.ask_1 >= self.T_price or self.T_price == -1):
                         self.backward_catch = True
                         self.forward_gap_balance = False
-                        regression_size = max(1.0,regression_2(self.forward_entry_price,self.backward_entry_price,self.forward_position_size,-self.backward_position_size,self.ask_1,-0.5*self.gra_T_std*self.t_foc,0.5*self.gra_T_std))
- #                       self.backward_catch_size = int(max(-self.forward_position_size/self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
-                        self.backward_catch_size = int(max(-regression_size,-self.backward_limit-self.backward_position_size))
+                        regression_size = regression_2(self.forward_entry_price,self.backward_entry_price,self.forward_position_size,-self.backward_position_size,self.ask_1,-0.5*self.gra_T_std*self.t_foc,0.5*self.gra_T_std)
+                        self.backward_catch_size = int(max(-self.forward_position_size/self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
+#                        self.backward_catch_size = int(max(-regression_size,-self.backward_limit-self.backward_position_size))
                         self.T_price = self.ask_1
                         print ('2222',regression_size)
                 elif self._T < self.T_std:
                     if self.backward_stable_price and not self.backward_gap_balance:
                         self.forward_catch = True
-                        regression_size = max(1.0,regression_1(self.forward_entry_price,self.backward_entry_price,self.forward_position_size,-self.backward_position_size,self.bid_1,-0.5*self.gra_T_*self.t_foc,0.5*self.gra_T_))
-                        self.forward_catch_size = int(min(regression_size,self.forward_limit-self.forward_position_size))
+                        regression_size = regression_1(self.forward_entry_price,self.backward_entry_price,self.forward_position_size,-self.backward_position_size,self.bid_1,-0.5*self.gra_T_*self.t_foc,0.5*self.gra_T_)
+#                        self.forward_catch_size = int(min(regression_size,self.forward_limit-self.forward_position_size))
+                        self.forward_catch_size = int(min(-self.backward_position_size*self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
                         print ('cccc',regression_size)
 #            elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
 #                if self.forward_position_size > abs(self.backward_position_size):
