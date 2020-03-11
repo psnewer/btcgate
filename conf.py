@@ -40,7 +40,7 @@ def send_email(e_html):
 		msg['To'] = formataddr(["receiver", receive])  # 收件人邮箱昵称、收件人邮箱账号
 		msg['Subject'] = sub
 		body = """
-		<b>This is HJGT statement items:</b>
+		<b>This is GateIO items:</b>
 		<div>{e_html}</div>
 		""".format(e_html = e_html)
 	        text = MIMEText(body, 'html', 'utf-8')
