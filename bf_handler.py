@@ -21,6 +21,7 @@ class Future_Handler(object):
         self.limit_position = contract_params['limit_position']
         self.limit_delta = contract_params['limit_delta']
         self.limit_size = contract_params['limit_size']
+        self.max_size = contract_params['max_size']
         self.balance_overflow = 0
         self.forward_account_from = 0
         self.backward_account_from = 0
@@ -39,6 +40,8 @@ class Future_Handler(object):
         self.goods = 0.0
         self.forward_goods = 0.0
         self.backward_goods = 0.0
+        self.pre_overflow = 0.0
+        self.pre_S = 0.0
         self.size_rt = 1
         self.sleep_clear = False
 
@@ -160,9 +163,15 @@ class Future_Handler(object):
             self._T = 0.61
 
         if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
+            if self.pre_overflow != self.balance_overflow:
+                self.pre_overflow = self.balance_overflow
+                self.pre_S = -self.pre_overflow/self.forward_goods
             self._S = -self.balance_overflow/self.forward_goods
             self.S_ = -self.backward_goods/self.forward_goods
         elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
+            if self.pre_overflow != self.balance_overflow:
+                self.pre_overflow = self.balance_overflow
+                self.pre_S = -self.pre_overflow/self.backward_goods
             self._S = -self.balance_overflow/self.backward_goods
             self.S_ = -self.forward_goods/self.backward_goods
         elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
@@ -177,25 +186,31 @@ class Future_Handler(object):
                 self.balance_overflow = max(0.0,(1.0-self.S_)/self._S*self.balance_overflow)
 
         if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
-            self.t = self.t_f/(self.t_b-self.t_f)
-            if self._T == 0.0:
-                self.goods_rt = math.exp(self.gra_T_std)
+            if min(self.forward_position_size,abs(self.backward_position_size)) > self.max_size*math.exp(-0.5*self.gra_T_std) and self.t_b > self.t_f:
+                self.t = self.t_f/(self.t_b-self.t_f)
             else:
-                self.goods_rt = math.exp(self.gra_T_std*(1.0-self.t))/self._T
-            self.T_std = math.exp(0.5*self.gra_T_std*(1.0-self.t))
+                self.t = self.t_f/self.t_b
+            if self._T == 0.0:
+                self.goods_rt = math.exp(self.gra_T_std*(1.0-self.pre_S))
+            else:
+                self.goods_rt = math.exp(self.gra_T_std*(1.0-self.pre_S-self.t))/self._T
+            self.T_std = math.exp(0.5*self.gra_T_std*(1.0-self.pre_S-self.t))
             self.s_pos_rt = self.t_f/self.t_b*self.S_
-            self.s_neg_rt = self.S_
-            print (self.S_,self._S,self.s_pos_rt,self.s_neg_rt,self.t)
+            self.s_pos_rt = self.S_
+            print (self.S_,self._S,self.s_pos_rt,self.s_neg_rt,self.pre_S,self.t)
         elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
-            self.t = self.t_b/(self.t_b-self.t_f)
-            if self._T == 0.0:
-                self.goods_rt = math.exp(self.gra_T_std)
+            if min(abs(self.backward_position_size),self.forward_position_size) > self.max_size*math.exp(-0.5*self.gra_T_std) and self.t_b > self.t_f:
+                self.t = self.t_f/(self.t_b-self.t_f)
             else:
-                self.goods_rt = math.exp(self.gra_T_std*(1.0-self.t))/self._T
-            self.T_std = math.exp(0.5*self.gra_T_std*(1.0-self.t))
+                self.t = self.t_f/self.t_b
+            if self._T == 0.0:
+                self.goods_rt = math.exp(self.gra_T_std*(1.0-self.pre_S))
+            else:
+                self.goods_rt = math.exp(self.gra_T_std*(1.0-self.pre_S-self.t))/self._T
+            self.T_std = math.exp(0.5*self.gra_T_std*(1.0-self.pre_S-self.t))
             self.s_pos_rt = self.t_f/self.t_b*self.S_
             self.s_neg_rt = self.S_
-            print (self.S_,self._S,self.s_pos_rt,self.s_neg_rt,self.t)
+            print (self.S_,self._S,self.s_pos_rt,self.s_neg_rt,self.pre_S,self.t)
         elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
             self.goods_rt = 1.0
             self.T_std = 1.0
@@ -227,8 +242,8 @@ class Future_Handler(object):
         if self.forward_gap_balance:
             if self.forward_gap >= 0.0:
                 if self.backward_gap < 0.0:
-                    self.forward_balance_size = int(max(self.forward_position_size*(self.s_pos_rt-self._S)*self.backward_goods/self.forward_goods,-self.forward_position_size))
-                    print ('d1',self.forward_position_size*(self.s_pos_rt-self._S)*self.backward_goods/self.forward_goods,-self.forward_position_size)
+                    self.forward_balance_size = int(max(-self.forward_position_size*self.t_f/self.t_b,-self.forward_position_size))
+                    print ('d1',-self.forward_position_size*self.t_f/self.t_b,-self.forward_position_size)
                 else:
                     self.forward_balance_size = int(-self.foward_position_size - self.backward_position_size*self.T_std)
             else:
@@ -246,8 +261,8 @@ class Future_Handler(object):
         if self.backward_gap_balance:
             if self.backward_gap >= 0.0:
                 if self.forward_gap < 0.0:
-                    self.backward_balance_size = int(min(self.backward_position_size*(self.s_pos_rt-self._S)*self.forward_goods/self.backward_goods,-self.backward_position_size))
-                    print ('d3',self.backward_position_size*(self.s_pos_rt-self._S)*self.forward_goods/self.backward_goods,-self.backward_position_size)
+                    self.backward_balance_size = int(min(-self.backward_position_size*self.t_f/self.t_b,-self.backward_position_size))
+                    print ('d3',-self.backward_position_size*self.t_f/self.t_b,-self.backward_position_size)
                 else:
                     self.backward_balance_size = int(-self.backward_position_size - self.forward_position_size*self.T_std)
             else:
@@ -294,8 +309,46 @@ class Future_Handler(object):
                 self.backward_gap_level = self.level[gap_level]['leverage']
                 break
 
-        self.forward_limit = self.limit_size
-        self.backward_limit = self.limit_size
+        if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
+            if self._T < self.T_std and not self.forward_gap_balance and self.forward_position_size >= self.limit_size*self.size_rt:
+#                backward_accounts = backward_api_instance.list_futures_accounts(settle=self.settle)
+#                if float(backward_accounts._available)/(float(self.backward_positions._value)/abs(self.backward_position_size))*self.backward_leverage > self.limit_size*self.size_rt*2+self.backward_position_size: 
+                self.size_rt = self.size_rt * 2
+#                else:
+#                    raise Exception('insufficient backward available')
+            elif not (self._T < self.T_std and not self.forward_gap_balance) and self.forward_position_size < self.limit_size*self.size_rt:
+                self.size_rt = self.size_rt / 2
+            self.size_rt = min(2,max(1,self.size_rt))
+        elif self.forward_gap >= 0.0 and self.backward_gap < 0.0:
+            if self._T < self.T_std and not self.backward_gap_balance and abs(self.backward_position_size) >= self.limit_size*self.size_rt:
+#                forward_accounts = forward_api_instance.list_futures_accounts(settle=self.settle)
+#                if float(forward_accounts._available)/(float(self.forward_positions._value)/self.forward_position_size)*self.forward_leverage > self.limit_size*self.size_rt*2-self.forward_position_size:
+                self.size_rt = self.size_rt * 2
+#                else:
+#                    raise Exception('insufficient forward available')
+            elif not (self._T < self.T_std and not self.backward_gap_balance) and abs(self.backward_position_size) < self.limit_size*self.size_rt:
+                self.size_rt = self.size_rt / 2
+            self.size_rt = min(2,max(1,self.size_rt))
+
+        self.forward_limit = self.limit_size * self.size_rt
+        self.backward_limit = self.limit_size * self.size_rt
+        if self.forward_gap >= 0.0 and self.backward_gap < 0.0:
+            if abs(self.backward_position_size) < self.backward_limit:
+                self.forward_limit = max(self.forward_limit,abs(self.backward_position_size)*min(self.T_std,self.T_limit))
+                self.backward_limit = max(self.backward_limit,self.forward_position_size/max(self.T_std,1.0/self.T_limit))
+            else:
+                self.forward_limit = max(self.forward_limit,abs(self.backward_position_size))
+                self.backward_limit = max(self.backward_limit,self.forward_position_size/max(self.T_std,1.0/self.T_limit))
+        elif self.forward_gap < 0.0 and self.backward_gap >= 0.0:
+            if self.forward_position_size < self.forward_limit:
+                self.backward_limit = max(self.backward_limit,self.forward_position_size*min(self.T_std,self.T_limit))
+                self.forward_limit = max(self.forward_limit,abs(self.backward_position_size)/max(self.T_std,1.0/self.T_limit))
+            else:
+                self.backward_limit = max(self.backward_limit,self.forward_position_size)
+                self.forward_limit = max(self.forward_limit,abs(self.backward_position_size)/max(self.T_std,1.0/self.T_limit))
+
+        self.forward_limit = min(self.forward_limit,self.max_size)
+        self.backward_limit = min(self.backward_limit,self.max_size)
 
         self.forward_catch = False
         self.backward_catch = False
@@ -305,42 +358,34 @@ class Future_Handler(object):
         if self.catch:
             if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
                 if self._T > self.T_std:
-                    if self.backward_stable_price:
+                    if self.backward_stable_price and not self.backward_gap_balance:
                         self.forward_catch = True
-                        if self.backward_gap_balance:
-                            self.forward_catch_size = int(min(max(-self.backward_position_size/self.T_std-self.forward_position_size,-self.backward_position_size-self.forward_position_size),self.forward_limit-self.forward_position_size))
-                            print ('1111',-self.backward_position_size/self.T_std-self.forward_position_size,-self.backward_position_size-self.forward_position_size)
+                        if self.forward_position_size < self.limit_size:
+                            self.forward_catch_size = int(min(self.forward_limit-self.forward_position_size,self.forward_limit-self.forward_position_size))
+                            print ('1111',self.forward_limit-self.forward_position_size)
                         else:
                             self.forward_catch_size = int(min(-self.backward_position_size/self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
                             print ('1111',-self.backward_position_size/self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size)
                 elif self._T < self.T_std:
-                    if self.forward_stable_price:
+                    if self.forward_stable_price and not self.forward_gap_balance:
                         self.backward_catch = True
-                        if self.forward_gap_balance:
-                            self.backward_catch_size = int(max(min(-self.forward_position_size*self.T_std-self.backward_position_size,-self.forward_position_size-self.backward_position_size),-self.backward_limit-self.backward_position_size))
-                            print ('bbbb',-self.forward_position_size*self.T_std-self.backward_position_size,-self.forward_position_size-self.backward_position_size)
-                        else:
-                            self.backward_catch_size = int(max(-self.forward_position_size*self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
-                            print ('bbbb',-self.forward_position_size*self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size)
+                        self.backward_catch_size = int(max(-self.forward_position_size*self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
+                        print ('bbbb',-self.forward_position_size*self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size)
             elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
                 if self._T > self.T_std:
-                    if self.forward_stable_price:
+                    if self.forward_stable_price and not self.forward_gap_balance:
                         self.backward_catch = True
-                        if self.forward_gap_balance:
-                            self.backward_catch_size = int(max(min(-self.forward_position_size/self.T_std-self.backward_position_size,-self.forward_position_size-self.backward_position_size),-self.backward_limit-self.backward_position_size))
-                            print ('2222',-self.forward_position_size/self.T_std-self.backward_position_size,-self.forward_position_size-self.backward_position_size)
+                        if abs(self.backward_position_size) < self.limit_size:
+                            self.backward_catch_size = int(max(-self.backward_limit-self.backward_position_size,-self.backward_limit-self.backward_position_size))
+                            print ('2222',-self.backward_limit-self.backward_position_size)
                         else:
                             self.backward_catch_size = int(max(-self.forward_position_size/self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
                             print ('2222',-self.forward_position_size/self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size)
                 elif self._T < self.T_std:
-                    if self.backward_stable_price:
+                    if self.backward_stable_price and not self.backward_gap_balance:
                         self.forward_catch = True
-                        if self.backward_gap_balance:
-                            self.forward_catch_size = int(min(max(-self.backward_position_size*self.T_std-self.forward_position_size,-self.backward_position_size-self.forward_position_size),self.forward_limit-self.forward_position_size))
-                            print ('cccc',-self.backward_position_size*self.T_std-self.forward_position_size,-self.backward_position_size-self.forward_position_size)
-                        else:
-                            self.forward_catch_size = int(min(-self.backward_position_size*self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
-                            print ('cccc',-self.backward_position_size*self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size)
+                        self.forward_catch_size = int(min(-self.backward_position_size*self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
+                        print ('cccc',-self.backward_position_size*self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size)
 #            elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
 #                if self.forward_position_size > abs(self.backward_position_size):
 #                    self.backward_catch = True
