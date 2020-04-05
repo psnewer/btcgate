@@ -37,7 +37,7 @@ class Future_Handler(object):
         self.backward_gap_balance = True
         self.retreat = contract_params['retreat']
         self.balance_rt = contract_params['balance_rt']
-        self.goods = 0.0
+        self.goods = 0.000000258302
         self.forward_goods = 0.0
         self.backward_goods = 0.0
         self.size_rt = 1
@@ -179,20 +179,20 @@ class Future_Handler(object):
         if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
             self.t = -self.t_b/self.t_f
             if self._T == 0.0:
-                self.goods_rt = math.exp(self._S+self.S_)
+                self.goods_rt = math.exp((self._S+self.S_)*(1.0-self.t))
             else:
-                self.goods_rt = math.exp(self._S+self.S_)/self._T
-            self.T_std = math.exp(0.5*(self._S+self.S_))
+                self.goods_rt = math.exp((self._S+self.S_)*(1.0-self.t))/self._T
+            self.T_std = math.exp(0.5*(self._S+self.S_)*(1.0-self.t))
             self.s_pos_rt = self.t*self.S_
             self.s_neg_rt = self.S_
             print (self.S_,self._S,self.s_pos_rt,self.s_neg_rt,self.t)
         elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
             self.t = -self.t_f/self.t_b
             if self._T == 0.0:
-                self.goods_rt = math.exp(self._S+self.S_)
+                self.goods_rt = math.exp((self._S+self.S_)*(1.0-self.t))
             else:
-                self.goods_rt = math.exp(self._S+self.S_)/self._T
-            self.T_std = math.exp(0.5*(self._S+self.S_))
+                self.goods_rt = math.exp((self._S+self.S_)*(1.0-self.t))/self._T
+            self.T_std = math.exp(0.5*(self._S+self.S_)*(1.0-self.t))
             self.s_pos_rt = self.t*self.S_
             self.s_neg_rt = self.S_
             print (self.S_,self._S,self.s_pos_rt,self.s_neg_rt,self.t)
