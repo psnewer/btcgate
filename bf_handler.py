@@ -37,7 +37,7 @@ class Future_Handler(object):
         self.backward_gap_balance = True
         self.retreat = contract_params['retreat']
         self.balance_rt = contract_params['balance_rt']
-        self.goods = 0.000001643825
+        self.goods = 0.000000194185
         self.forward_goods = 0.0
         self.backward_goods = 0.0
         self.size_rt = 1
@@ -67,7 +67,10 @@ class Future_Handler(object):
         self.mark_price = float(self.forward_positions._mark_price)
         self.ask_1 = float(self.book._asks[0]._p)
         self.bid_1 = float(self.book._bids[0]._p)
-    
+ 
+        self.forward_limit = self.max_size
+        self.backward_limit = self.max_size
+   
         if self.forward_entry_price == 0:
             self.forward_entry_price = self.bid_1
         if self.backward_entry_price == 0:
@@ -226,9 +229,23 @@ class Future_Handler(object):
                 self.backward_gap_balance = True
         elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
             if self.forward_gap > self.backward_gap:
-                self.forward_gap_balance = True
+                if self._T < self.T_std:
+                    if self._S_backward >= (self.forward_position_size/self.T_std+self.backward_position_size)/self.backward_position_size:
+                        self.backward_gap_balance = True
+                        self.backward_balance_rt = (self.forward_position_size/self.T_std+self.backward_position_size)/self.backward_position_size
+                elif self._T > self.T_std:
+                    if self._S_forward >= (self.backward_position_size*self.T_std+self.forward_position_size)/self.forward_position_size:
+                        self.forward_gap_balance = True
+                        self.forward_balance_rt = (self.backward_position_size*self.T_std+self.forward_position_size)/self.forward_position_size
             else:
-                self.backward_gap_balance = True
+                if self._T < self.T_std:
+                    if self._S_forward >= (self.backward_position_size/self.T_std+self.forward_position_size)/self.forward_position_size:
+                        self.forward_gap_balance = True
+                        self.forward_balance_rt = (self.backward_position_size/self.T_std+self.forward_position_size)/self.forward_position_size
+                elif self._T > self.T_std:
+                    if self._S_backward >= (self.forward_position_size*self.T_std+self.backward_position_size)/self.backward_position_size:
+                        self.backward_gap_balance = True
+                        self.backward_balance_rt = (self.forward_position_size*self.T_std+self.backward_position_size)/self.backward_position_size
 
         if self.forward_gap_balance:
             if self.forward_gap >= 0.0:
@@ -242,8 +259,8 @@ class Future_Handler(object):
                     self.forward_balance_size = int(max(self.forward_position_size*self.balance_overflow/self.forward_goods,-self.forward_position_size))
                     print ('d2',self.forward_position_size*self.balance_overflow/self.forward_goods,-self.forward_position_size)
                 else:
-                    self.forward_balance_size = int(max(self.forward_position_size*(self.balance_overflow/self.forward_goods),-self.forward_position_size))
-                    print ('d2',self.forward_position_size*(self.balance_overflow/self.forward_goods),-self.forward_position_size)
+                    self.forward_balance_size = int(max(-self.forward_position_size*self.forward_balance_rt,self.forward_position_size*(self.balance_overflow/self.forward_goods)))
+                    print ('d2',-self.forward_position_size*self.forward_balance_rt,self.forward_position_size*(self.balance_overflow/self.forward_goods))
         if self.backward_gap_balance:
             if self.backward_gap >= 0.0:
                 if self.forward_gap < 0.0:
@@ -256,8 +273,8 @@ class Future_Handler(object):
                     self.backward_balance_size = int(min(self.backward_position_size*self.balance_overflow/self.backward_goods,-self.backward_position_size))
                     print ('d4',self.backward_position_size*self.balance_overflow/self.backward_goods,-self.backward_position_size)
                 else:
-                    self.backward_balance_size = int(min(self.backward_position_size*(self.balance_overflow/self.backward_goods),-self.backward_position_size))
-                    print ('d4',self.backward_position_size*(self.balance_overflow/self.backward_goods),-self.backward_position_size)
+                    self.backward_balance_size = int(min(-self.backward_position_size*self.backward_balance_rt,self.backward_position_size*(self.balance_overflow/self.backward_goods)))
+                    print ('d4',-self.backward_position_size*self.backward_balance_rt,self.backward_position_size*(self.balance_overflow/self.backward_goods))
         
         delta = abs(self.forward_position_size) - abs(self.backward_position_size)
         if delta >= self.limit_delta:
@@ -326,9 +343,6 @@ class Future_Handler(object):
 #        self.forward_limit = min(self.forward_limit,self.max_size)
 #        self.backward_limit = min(self.backward_limit,self.max_size)
 
-        self.forward_limit = self.max_size
-        self.backward_limit = self.max_size
-
         self.forward_catch = False
         self.backward_catch = False
         print ('aaaa',self.forward_limit,self.backward_limit)
@@ -367,20 +381,20 @@ class Future_Handler(object):
                         print ('cccc',-self.backward_position_size*self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size)
             elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
                 if self.forward_gap > self.backward_gap:
-                    if self._T < self.T_std and not (self.backward_gap_balance and self.backward_balance_size > 0):
+                    if self._T < self.T_std and not self.backward_gap_balance:
                         self.forward_catch = True
                         self.forward_catch_size = int(min(-self.backward_position_size*self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
                         print ('3311',-self.backward_position_size*self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size)
-                    elif self._T > self.T_std and not (self.forward_gap_balance and self.forward_balance_size < 0):
+                    elif self._T > self.T_std and not self.forward_gap_balance:
                         self.backward_catch = True
                         self.backward_catch_size = int(max(-self.forward_position_size/self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
                         print ('3322',-self.forward_position_size/self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size)
                 else:
-                    if self._T < self.T_std and not (self.forward_gap_balance and self.forward_balance_size < 0):
+                    if self._T < self.T_std and not self.forward_gap_balance:
                         self.backward_catch = True
                         self.backward_catch_size = int(max(-self.forward_position_size*self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size))
                         print ('4411',-self.forward_position_size*self.T_std-self.backward_position_size,-self.backward_limit-self.backward_position_size)
-                    elif self._T > self.T_std and not (self.backward_gap_balance and self.backward_balance_size > 0):
+                    elif self._T > self.T_std and not self.backward_gap_balance:
                         self.forward_catch = True
                         self.forward_catch_size = int(min(-self.backward_position_size/self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size))
                         print ('4422',-self.backward_position_size/self.T_std-self.forward_position_size,self.forward_limit-self.forward_position_size)
@@ -426,27 +440,22 @@ class Future_Handler(object):
                 if ((self.forward_position_alarm or self.forward_delta_alarm) and not self.forward_catch) or self.forward_position_size >= self.forward_limit:
                     forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
                 else:
-                    if self.bid_1 > order_price:
-#                        forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-                        if self.forward_catch and self.forward_catch_size > 0:
-                            forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-#                            forward_api_instance.create_futures_order(settle=self.settle,futures_order=FuturesOrder(contract=self.contract,size = self.forward_catch_size, price = self.bid_1,tif='poc'))
-                        elif (not self.forward_position_alarm and not self.forward_delta_alarm):
-                            forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-#                            forward_api_instance.create_futures_order(settle=self.settle,futures_order=FuturesOrder(contract=self.contract,size = order_size, price = self.bid_1,tif='poc'))
+                    if self.bid_1 > order_price or (self.forward_catch and self.forward_catch_size==0):
+#                        if self.forward_catch and self.forward_catch_size >= 0:
+                        forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
+#                        elif (not self.forward_position_alarm and not self.forward_delta_alarm):
+#                            forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
             elif order_size < 0:
                 if self.forward_gap_balance:
-                    if self.forward_gap < 0.0 and self.forward_position_size > 0 and order_price > self.ask_1:
+                    if order_price > self.ask_1 or self.forward_balance_size==0:
+                        forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
+#                    if self.forward_gap < 0.0 and self.forward_position_size > 0 and order_price > self.ask_1:
+#                        if self.balance_overflow > 0.0 and self.forward_balance_size <= 0:
+#                            forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
+#                    elif self.forward_gap >= 0.0 and order_price > self.ask_1 and self.forward_position_size > 0:
 #                        forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-                        if self.balance_overflow > 0.0 and self.forward_balance_size < 0:
-                            forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-#                            forward_api_instance.create_futures_order(settle=self.settle,futures_order=FuturesOrder(contract=self.contract,size =self.forward_balance_size, price = self.ask_1,tif='poc'))
-                    elif self.forward_gap >= 0.0 and order_price > self.ask_1 and self.forward_position_size > 0:
-                        forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-#                        if self.forward_balance_size < 0:
-#                            forward_api_instance.create_futures_order(settle=self.settle,futures_order=FuturesOrder(contract=self.contract,size=self.forward_balance_size,price = self.ask_1,tif='poc'))
-                    elif self.forward_position_size == 0 or order_price > self.ask_1:
-                        forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
+#                    elif self.forward_position_size == 0 or order_price > self.ask_1:
+#                        forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
                 else:
                     forward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
         if not self.forward_increase_clear:
@@ -482,27 +491,22 @@ class Future_Handler(object):
                 if ((self.backward_position_alarm or self.backward_delta_alarm) and not self.backward_catch) or abs(self.backward_position_size) >= self.backward_limit:
                     backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
                 else:
-                    if self.ask_1 < order_price:
-#                        backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-                        if self.backward_catch and self.backward_catch_size < 0:
-                            backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-#                            backward_api_instance.create_futures_order(settle=self.settle,futures_order=FuturesOrder(contract=self.contract,size = self.backward_catch_size, price = self.ask_1,tif='poc'))
-                        elif (not self.backward_position_alarm and not self.backward_delta_alarm):
-                            backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-#                            backward_api_instance.create_futures_order(settle=self.settle,futures_order=FuturesOrder(contract=self.contract,size = order_size, price = self.ask_1,tif='poc'))
+                    if self.ask_1 < order_price or (self.backward_catch and self.backward_catch_size==0):
+#                        if self.backward_catch and self.backward_catch_size <= 0:
+                        backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
+#                        elif (not self.backward_position_alarm and not self.backward_delta_alarm):
+#                            backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
             elif order_size > 0:
                 if self.backward_gap_balance:
-                    if self.backward_gap < 0.0 and self.backward_position_size < 0 and order_price < self.bid_1:
+                    if order_price < self.bid_1 or self.backward_balance_size==0:
+                        backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
+#                    if self.backward_gap < 0.0 and self.backward_position_size < 0 and order_price < self.bid_1:
+#                        if self.balance_overflow > 0.0 and self.backward_balance_size >= 0:
+#                            backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
+#                    elif self.backward_gap >= 0.0 and order_price < self.bid_1 and self.backward_position_size < 0:
 #                        backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-                        if self.balance_overflow > 0.0 and self.backward_balance_size > 0:
-                            backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-#                            backward_api_instance.create_futures_order(settle=self.settle,futures_order=FuturesOrder(contract=self.contract,size = self.backward_balance_size, price = self.bid_1,tif='poc'))
-                    elif self.backward_gap >= 0.0 and order_price < self.bid_1 and self.backward_position_size < 0:
-                        backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
-#                        if self.backward_balance_size > 0:
-#                            backward_api_instance.create_futures_order(settle=self.settle,futures_order=FuturesOrder(contract=self.contract,size=self.backward_balance_size,price = self.bid_1,tif='poc'))
-                    elif self.backward_position_size == 0 or order_price < self.bid_1:
-                        backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
+#                    elif self.backward_position_size == 0 or order_price < self.bid_1:
+#                        backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
                 else:
                     backward_api_instance.cancel_futures_order(settle=self.settle,order_id=order_id)
         if not self.backward_increase_clear:
