@@ -28,26 +28,28 @@ class Future_Manager(object):
             elif contracts[contr]['first_handler'] == '1t':
                 self.current_handler = self.handler_1t
             self.current_handler.get_flag()
-            Future_Handler.t_head = min(Future_Handler.t * 1.1,0.9)
-            Future_Handler.S_head = min(Future_Handler.S_ * 1.1,0.75)
+            Future_Handler.t_head = min(Future_Handler.t + 0.2,0.9)
+            Future_Handler.t_tail = max(Future_Handler.t - 0.4,-0.9)
+            Future_Handler.S_up = Future_Handler.S_
+            Future_Handler.S_dn = Future_Handler.S_
 	f_exp.close()
 
     def get_handler(self):
         if self.current_handler.tip == 't':
-            if Future_Handler.t > Future_Handler.t_head:
+            if Future_Handler.t < Future_Handler.t_tail:
                 #if Future_Handler._T <= Future_Handler.T_std or (self.current_handler.forward_gap>0.0 and self.current_handler.forward_balance_size==0) or (self.current_handler.backward_gap>0.0 and self.current_handler.backward_balance_size==0):
                 self.current_handler = self.handler_1t
                 Future_Handler.S_up = Future_Handler.S_
-                Future_Handler.S_dn = max(Future_Handler.S_ * 0.9,0.0)
-                Future_Handler.S_head = min(Future_Handler.S_ * 1.1,0.75)
-            print (self.current_handler.tip,Future_Handler.t,Future_Handler.t_head)
+                Future_Handler.S_dn = Future_Handler.S_
+                Future_Handler.t_head = min(Future_Handler.t + 0.2,0.9)
+            print (self.current_handler.tip,Future_Handler.t,Future_Handler.t_tail)
         elif self.current_handler.tip == '1t':
-            if Future_Handler.S_ > Future_Handler.S_head:
+            if Future_Handler.t > Future_Handler.t_head:
                 self.current_handler = self.handler_t
                 Future_Handler.S_up = Future_Handler.S_
-                Future_Handler.S_dn = max(Future_Handler.S_ * 0.9,0.0)
-                Future_Handler.t_head = min(Future_Handler.t * 1.1,0.9)
-            print (self.current_handler.tip,Future_Handler.S_,Future_Handler.S_head)
+                Future_Handler.S_dn = Future_Handler.S_
+                Future_Handler.t_tail = max(Future_Handler.t - 0.4,-0.9)
+            print (self.current_handler.tip,Future_Handler.t,Future_Handler.t_head)
         print (self.current_handler.tip,Future_Handler.S_,Future_Handler.S_up,Future_Handler.S_dn)
 
     def run(self):

@@ -31,7 +31,7 @@ class Future_Handler(object):
     S_dn = 2.0
     retreat = False
     balance_rt = 1.0
-    goods = 0.246653990534
+    goods = 0.014791963626
     forward_goods = 0.0
     backward_goods = 0.0
     _S = 0.0
@@ -61,9 +61,8 @@ class Future_Handler(object):
         Future_Handler.backward_goods = 0.0
         Future_Handler._S = 0.0
         Future_Handler.S_ = 0.0
-        Future_Handler.t = 0.0
-        Future_Handler.S_head = 0.0
         Future_Handler.t_head = 0.0
+        Future_Handler.t_tail = 0.0
 
     def get_flag(self):
         forward_orders = forward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)
