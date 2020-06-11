@@ -26,16 +26,11 @@ class Future_Handler(object):
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
-    catch = None
-    S_up = 0.0
-    S_dn = 2.0
     retreat = False
     balance_rt = 1.0
-    goods = 0.014791963626
+    goods = 0.117272087275
     forward_goods = 0.0
     backward_goods = 0.0
-    _S = 0.0
-    S_ = 0.0
     t = 0.0
     _T = None
     T_std = None
@@ -54,13 +49,18 @@ class Future_Handler(object):
         Future_Handler.forward_trigger_liq = -1
         Future_Handler.backward_trigger_liq = -1
         Future_Handler.quanto = contract_params['quanto']
-        Future_Handler.catch = contract_params['catch']
+        Future_Handler.catch = False
+        Future_Handler.balance = False
         Future_Handler.retreat = contract_params['retreat']
         Future_Handler.balance_rt = contract_params['balance_rt']
         Future_Handler.forward_goods = 0.0
         Future_Handler.backward_goods = 0.0
         Future_Handler._S = 0.0
         Future_Handler.S_ = 0.0
+        Future_Handler.S_up = 0.0
+        Future_Handler.S_dn = 0.0
+        Future_Handler.t_up = 0.0
+        Future_Handler.t_dn = 0.0
         Future_Handler.t_head = 0.0
         Future_Handler.t_tail = 0.0
 
