@@ -28,7 +28,7 @@ class Future_Handler(object):
     quanto = None
     retreat = False
     balance_rt = 1.0
-    goods = 0.117272087275
+    goods = 0.414281622756
     forward_goods = 0.0
     backward_goods = 0.0
     t = 0.0
@@ -61,6 +61,14 @@ class Future_Handler(object):
         Future_Handler.S_dn = 0.0
         Future_Handler.t_up = 0.0
         Future_Handler.t_dn = 0.0
+        Future_Handler.S_up_t = 0.0
+        Future_Handler.S_dn_t = 0.0
+        Future_Handler.t_up_S = 0.0
+        Future_Handler.t_dn_S = 0.0
+        Future_Handler.step_soft = 10.0
+        Future_Handler.step_hard = 100.0
+        Future_Handler.rt_soft = 0.0
+        Future_Handler.rt_hard = 0.0
         Future_Handler.t_head = 0.0
         Future_Handler.t_tail = 0.0
 

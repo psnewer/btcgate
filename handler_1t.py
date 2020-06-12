@@ -50,7 +50,10 @@ class Handler_1T(Future_Handler):
         if self.backward_entry_price == 0:
             self.backward_entry_price = self.ask_1
         self.entry_gap = self.forward_entry_price - self.backward_entry_price
-    
+   
+        Future_Handler.rt_soft = Future_Handler.step_soft/self.entry_gap
+        Future_Handler.rt_hard = Future_Handler.step_hard/self.entry_gap
+        
         if self.forward_position_size >= Future_Handler.limit_position:
             self.forward_position_alarm = True
         else:
@@ -154,9 +157,9 @@ class Handler_1T(Future_Handler):
         elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
             Future_Handler._S = -Future_Handler.balance_overflow/(Future_Handler.forward_goods+Future_Handler.backward_goods)
             if self.forward_gap > self.backward_gap:
-                Future_Handler.S_ = -Future_Handler.forward_goods/Future_Handler.backward_goods
+                Future_Handler.S_ = -Future_Handler.forward_goods/(Future_Handler.backward_goods+Future_Handler.forward_goods)
             else:
-                Future_Handler.S_ = -Future_Handler.backward_goods/Future_Handler.forward_goods
+                Future_Handler.S_ = -Future_Handler.backward_goods/(Future_Handler.forward_goods+Future_Handler.backward_goods)
         elif self.forward_gap >= 0.0 and self.backward_gap >= 0.0:
             Future_Handler._S = 1.0
             Future_Handler.S_ = 1.0
@@ -168,51 +171,59 @@ class Handler_1T(Future_Handler):
         if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
             Future_Handler.t = -self.t_b/self.t_f
             Future_Handler.T_std = 1.6 - 0.6*Future_Handler.t
-            Future_Handler.t_head = min(Future_Handler.t_head,Future_Handler.t+0.4)
+            Future_Handler.t_head = min(Future_Handler.t_head,Future_Handler.t+Future_Handler.rt_hard*(1.0-Future_Handler.t))
         elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
             Future_Handler.t = -self.t_f/self.t_b
             Future_Handler.T_std = 1.6 - 0.6*Future_Handler.t
-            Future_Handler.t_head = min(Future_Handler.t_head,Future_Handler.t+0.4)
+            Future_Handler.t_head = min(Future_Handler.t_head,Future_Handler.t+Future_Handler.rt_hard*(1.0-Future_Handler.t))
         elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
-#            Future_Handler.t = 0.0
-#            Future_Handler.T_std = 0.0
             if self.forward_gap > self.backward_gap:
-                Future_Handler.t = -self.t_f/self.t_b
+                Future_Handler.t = -self.t_f/(self.t_b+self.t_f)
             else:
-                Future_Handler.t = -self.t_b/self.t_f
+                Future_Handler.t = -self.t_b/(self.t_f+self.t_b)
             Future_Handler.T_std = 1.6
 #            Future_Handler.t_head = min(Future_Handler.t_head,Future_Handler.t+0.8)
 #        elif self.forward_gap >= 0.0 and self.backward_gap >= 0.0:
 #            Future_Handler.T_std = 0.61
-
+        
         if Future_Handler.balance and not Future_Handler.catch:
-            if Future_Handler.t >= Future_Handler.t_up+0.1:
+            if Future_Handler.t >= Future_Handler.t_up_S:
                 Future_Handler.balance = False
                 Future_Handler.catch = True
                 Future_Handler.S_up = Future_Handler.S_
-                Future_Handler.S_dn = Future_Handler.S_-0.1
-            elif Future_Handler.t <= Future_Handler.t_dn-0.1:
+                Future_Handler.S_up_t = (1.0-Future_Handler.rt_soft)*Future_Handler.S_+Future_Handler.rt_soft*Future_Handler._T
+                Future_Handler.S_dn = (1.0+Future_Handler.rt_soft)*Future_Handler.S_-Future_Handler.rt_soft*Future_Handler._T
+                Future_Handler.S_dn_t = (1.0+2*Future_Handler.rt_soft)*Future_Handler.S_-2*Future_Handler.rt_soft*Future_Handler._T
+            elif Future_Handler.t <= Future_Handler.t_dn_S:
                 Future_Handler.balance = False
                 Future_Handler.catch = True
                 Future_Handler.S_dn = Future_Handler.S_
-                Future_Handler.S_up = Future_Handler.S_+0.1
+                Future_Handler.S_dn_t = (1.0+Future_Handler.rt_soft)*Future_Handler.S_-Future_Handler.rt_soft*Future_Handler._T
+                Future_Handler.S_up = (1.0-Future_Handler.rt_soft)*Future_Handler.S_+Future_Handler.rt_soft*Future_Handler._T
+                Future_Handler.S_up_t = (1.0-2*Future_Handler.rt_soft)*Future_Handler.S_+2*Future_Handler.rt_soft*Future_Handler._T
             print ('balance',Future_Handler.t,Future_Handler.t_up,Future_Handler.t_dn)
         elif not Future_Handler.balance and Future_Handler.catch:
-            if Future_Handler.S_ >= Future_Handler.S_up+0.1:
+            if Future_Handler.S_ >= Future_Handler.S_up_t:
                 Future_Handler.catch = False
                 Future_Handler.balance = True
                 Future_Handler.t_up = Future_Handler.t
-                Future_Handler.t_dn = Future_Handler.t-0.1
-            elif Future_Handler.S_ <= Future_Handler.S_dn-0.1:
+                Future_Handler.t_dn = (1.0+Future_Handler.rt_soft)*Future_Handler.t-Future_Handler.rt_soft
+                Future_Handler.t_up_S = (1.0-Future_Handler.rt_soft)*Future_Handler.t+Future_Handler.rt_soft
+                Future_Handler.t_dn_S = (1.0+2*Future_Handler.rt_soft)*Future_Handler.t-2*Future_Handler.rt_soft
+            elif Future_Handler.S_ <= Future_Handler.S_dn_t:
                 Future_Handler.catch = False
                 Future_Handler.balance = True
                 Future_Handler.t_dn = Future_Handler.t
-                Future_Handler.t_up = Future_Handler.t+0.1
+                Future_Handler.t_up = (1.0-Future_Handler.rt_soft)*Future_Handler.t+Future_Handler.rt_soft
+                Future_Handler.t_dn_S = (1.0+Future_Handler.rt_soft)*Future_Handler.t-Future_Handler.rt_soft
+                Future_Handler.t_up_S = (1.0-2*Future_Handler.rt_soft)*Future_Handler.t+2*Future_Handler.rt_soft
             print ('catch',Future_Handler.S_,Future_Handler.S_up,Future_Handler.S_dn)
         elif not Future_Handler.balance and not Future_Handler.catch:
             Future_Handler.balance = True
-            Future_Handler.t_up = Future_Handler.t+0.1
-            Future_Handler.t_dn = Future_Handler.t-0.1
+            Future_Handler.t_up = (1.0-Future_Handler.rt_soft)*Future_Handler.t+Future_Handler.rt_soft
+            Future_Handler.t_dn = (1.0+Future_Handler.rt_soft)*Future_Handler.t-Future_Handler.rt_soft
+            Future_Handler.t_up_S = (1.0-2*Future_Handler.rt_soft)*Future_Handler.t+2*Future_Handler.rt_soft
+            Future_Handler.t_dn_S = (1.0+2*Future_Handler.rt_soft)*Future_Handler.t-2*Future_Handler.rt_soft
 
         self.forward_gap_balance = False
         self.forward_balance_size = 0
