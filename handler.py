@@ -28,7 +28,7 @@ class Future_Handler(object):
     quanto = None
     retreat = False
     balance_rt = 1.0
-    goods = 0.414281622756
+    goods = 0.255625331581
     forward_goods = 0.0
     backward_goods = 0.0
     t = 0.0
@@ -116,16 +116,16 @@ class Future_Handler(object):
             self.backward_position_alarm = False
 
         if self.forward_position_size > 0 and self.forward_entry_price > 0:
-            self.t_f = self.ask_1 - self.forward_entry_price
-            self.forward_gap = self.t_f/self.forward_entry_price
+            Future_Handler.t_f = self.ask_1 - self.forward_entry_price
+            self.forward_gap = Future_Handler.t_f/self.forward_entry_price
         else:
-            self.t_f = 0.0
+            Future_Handler.t_f = 0.0
             self.forward_gap = 0.0
         if self.backward_position_size < 0 and self.backward_entry_price > 0:
-            self.t_b = self.backward_entry_price - self.bid_1
-            self.backward_gap = self.t_b/self.backward_entry_price
+            Future_Handler.t_b = self.backward_entry_price - self.bid_1
+            self.backward_gap = Future_Handler.t_b/self.backward_entry_price
         else:
-            self.t_b = 0.0
+            Future_Handler.t_b = 0.0
             self.backward_gap = 0.0
 
         if len(candlesticks) > 0:
