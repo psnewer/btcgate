@@ -13,27 +13,40 @@ from gate_api.rest import ApiException
 from conf import *
 
 class Future_Handler(object):
-    contract = None
-    settle = None
-    tap = None
-    level = None
-    limit_position = None
-    limit_delta = None
-    limit_size = None
-    balance_overflow = None
-    forward_account_from = None
-    backward_account_from = None
+    balance_overflow = 0.0
+    forward_account_from = 0
+    backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
-    retreat = False
     balance_rt = 1.0
-    goods = 0.255625331581
+    goods = 0.375777766884
+    goods_w = 0.0
     forward_goods = 0.0
     backward_goods = 0.0
+    catch = False
+    balance = False
     t = 0.0
     _T = None
     T_std = None
+    _S = 0.0
+    S_ = 0.0
+    S_up = 0.0
+    S_dn = 0.0
+    t_up = 0.0
+    t_dn = 0.0
+    S_up_t = 0.0
+    S_dn_t = 0.0
+    t_up_S = 0.0
+    t_dn_S = 0.0
+    step_soft = 10.0
+    step_hard = 100.0
+    rt_soft = 0.0
+    rt_hard = 0.0
+    t_head = 0.0
+    t_tail = 0.0
+    start_point = None
+    end_point = None
 
     def __init__(self,contract = '',contract_params = {}):
 	Future_Handler.contract = contract
@@ -43,34 +56,13 @@ class Future_Handler(object):
         Future_Handler.limit_position = contract_params['limit_position']
         Future_Handler.limit_delta = contract_params['limit_delta']
         Future_Handler.limit_size = contract_params['limit_size']
-        Future_Handler.balance_overflow = 0.0
-        Future_Handler.forward_account_from = 0
-        Future_Handler.backward_account_from = 0
-        Future_Handler.forward_trigger_liq = -1
-        Future_Handler.backward_trigger_liq = -1
         Future_Handler.quanto = contract_params['quanto']
-        Future_Handler.catch = False
-        Future_Handler.balance = False
-        Future_Handler.retreat = contract_params['retreat']
         Future_Handler.balance_rt = contract_params['balance_rt']
-        Future_Handler.forward_goods = 0.0
-        Future_Handler.backward_goods = 0.0
-        Future_Handler._S = 0.0
-        Future_Handler.S_ = 0.0
-        Future_Handler.S_up = 0.0
-        Future_Handler.S_dn = 0.0
-        Future_Handler.t_up = 0.0
-        Future_Handler.t_dn = 0.0
-        Future_Handler.S_up_t = 0.0
-        Future_Handler.S_dn_t = 0.0
-        Future_Handler.t_up_S = 0.0
-        Future_Handler.t_dn_S = 0.0
-        Future_Handler.step_soft = 10.0
-        Future_Handler.step_hard = 100.0
-        Future_Handler.rt_soft = 0.0
-        Future_Handler.rt_hard = 0.0
-        Future_Handler.t_head = 0.0
-        Future_Handler.t_tail = 0.0
+        Future_Handler.retreat_endure = contract_params['retreat_endure']
+        Future_Handler.sow_endure = contract_params['sow_endure']
+        Future_Handler.surplus_bottom = contract_params['surplus_bottom']
+        Future_Handler.peak = contract_params['peak']
+        Future_Handler.peak = contract_params['bottom']
 
     def get_flag(self):
         forward_orders = forward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)
