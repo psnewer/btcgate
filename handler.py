@@ -20,7 +20,7 @@ class Future_Handler(object):
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 0.304251154098
+    goods = 0.002808424581 
     goods_w = 0.0
     forward_goods = 0.0
     backward_goods = 0.0
@@ -64,7 +64,7 @@ class Future_Handler(object):
         Future_Handler.surplus_bottom = contract_params['surplus_bottom']
         Future_Handler.surplus_endure = contract_params['surplus_endure']
         Future_Handler.peak = contract_params['peak']
-        Future_Handler.peak = contract_params['bottom']
+        Future_Handler.bottom = contract_params['bottom']
 
     def get_flag(self):
         forward_orders = forward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)

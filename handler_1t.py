@@ -73,11 +73,11 @@ class Handler_1T(Future_Handler):
             o = float(candlesticks[len(candlesticks)-1]._o)
             c = float(candlesticks[len(candlesticks)-1]._c)
             if (c - o)/self.bid_1 > 0.001:
-                if (self.bid_1 - c)/self.bid_1 > -0.001:
-                    self.forward_stable_price = False
+#                if (self.bid_1 - c)/self.bid_1 > -0.001:
+                self.forward_stable_price = False
             elif (c - o)/self.ask_1 < -0.001:
-                if (self.ask_1 - c)/self.ask_1 < 0.001:
-                    self.backward_stable_price = False
+#                if (self.ask_1 - c)/self.ask_1 < 0.001:
+                self.backward_stable_price = False
 #        if len(candlesticks) > 0:
 #            o = float(candlesticks[len(candlesticks)-1]._o)
 #            c = float(candlesticks[len(candlesticks)-1]._c)
@@ -237,8 +237,8 @@ class Handler_1T(Future_Handler):
                         if Future_Handler.t <= Future_Handler.t_dn:
                             self.backward_gap_balance = True
                 else:
-                    if self.forward_stable_price and Future_Handler._T > Future_Handler.T_std:
-                        if Future_Handler.t >= Future_Handler.t_up:
+                    if self.forward_stable_price and Future_Handler._T < Future_Handler.T_std:
+                        if Future_Handler.t <= Future_Handler.t_dn:
                             self.forward_gap_balance = True
     #        elif self.forward_gap >= 0.0 and self.backward_gap >= 0.0:
     #            if self.forward_position_size > 0:

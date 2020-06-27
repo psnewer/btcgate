@@ -73,11 +73,11 @@ class Handler_T(Future_Handler):
             o = float(candlesticks[len(candlesticks)-1]._o)
             c = float(candlesticks[len(candlesticks)-1]._c)
             if (c - o)/self.bid_1 > 0.001:
-                if (self.bid_1 - c)/self.bid_1 > -0.001:
-                    self.forward_stable_price = False
+#                if (self.bid_1 - c)/self.bid_1 > -0.001:
+                self.forward_stable_price = False
             elif (c - o)/self.ask_1 < -0.001:
-                if (self.ask_1 - c)/self.ask_1 < 0.001:
-                    self.backward_stable_price = False
+#                if (self.ask_1 - c)/self.ask_1 < 0.001:
+                self.backward_stable_price = False
 #            if abs(o - c)/self.bid_1 < 0.001 or o > c:
 #                self.forward_stable_price = True
 #            else:
@@ -155,13 +155,13 @@ class Handler_T(Future_Handler):
         if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
             Future_Handler.t = -Future_Handler.t_b/Future_Handler.t_f
             Future_Handler.T_std = 1.0 - 1.0*Future_Handler.t
-            if -Future_Handler.t_b > 2*Future_Handler.step_hard:
-                Future_Handler.t_tail = max(Future_Handler.t_tail,((1.0+2*Future_Handler.rt_hard)*Future_Handler.t-2*Future_Handler.rt_hard)/(1.0+2*Future_Handler.rt_hard*(Future_Handler.t-1.0)))
+            if -min(Future_Handler.t_f,Future_Handler.t_b) > Future_Handler.step_hard:
+                Future_Handler.t_tail = max(Future_Handler.t_tail,((1.0+Future_Handler.rt_hard)*Future_Handler.t-Future_Handler.rt_hard)/(1.0+Future_Handler.rt_hard*(Future_Handler.t-1.0)))
         elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
             Future_Handler.t = -Future_Handler.t_f/Future_Handler.t_b
             Future_Handler.T_std = 1.0 - 1.0*Future_Handler.t
-            if -Future_Handler.t_b > 2*Future_Handler.step_hard:
-                Future_Handler.t_tail = max(Future_Handler.t_tail,((1.0+2*Future_Handler.rt_hard)*Future_Handler.t-2*Future_Handler.rt_hard)/(1.0+2*Future_Handler.rt_hard*(Future_Handler.t-1.0)))
+            if -min(Future_Handler.t_f,Future_Handler.t_b) > Future_Handler.step_hard:
+                Future_Handler.t_tail = max(Future_Handler.t_tail,((1.0+Future_Handler.rt_hard)*Future_Handler.t-Future_Handler.rt_hard)/(1.0+Future_Handler.rt_hard*(Future_Handler.t-1.0)))
         elif self.forward_gap < 0.0 and self.backward_gap < 0.0:
             if self.forward_gap > self.backward_gap:
                 Future_Handler.t = -Future_Handler.t_f/(Future_Handler.t_b+Future_Handler.t_f)
@@ -235,8 +235,8 @@ class Handler_T(Future_Handler):
                         if Future_Handler.t <= Future_Handler.t_dn:
                             self.backward_gap_balance = True
                 else:
-                    if self.forward_stable_price and Future_Handler._T > Future_Handler.T_std:
-                        if Future_Handler.t >= Future_Handler.t_up:
+                    if self.forward_stable_price and Future_Handler._T < Future_Handler.T_std:
+                        if Future_Handler.t <= Future_Handler.t_dn:
                             self.forward_gap_balance = True
     #        elif self.forward_gap >= 0.0 and self.backward_gap >= 0.0:
     #            if self.forward_position_size > 0:

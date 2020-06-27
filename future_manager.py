@@ -31,10 +31,10 @@ class Future_Manager(object):
                 self.current_handler = self.handler_1t
             self.current_handler.get_flag()
             Future_Handler.t_head = min(((1.0-Future_Handler.rt_hard)*Future_Handler.t+Future_Handler.rt_hard)/(1.0+Future_Handler.rt_hard*(1.0-Future_Handler.t)),1.0)
-            if -Future_Handler.t_b <= 2*Future_Handler.step_hard:
+            if -min(Future_Handler.t_f,Future_Handler.t_b) <= Future_Handler.step_hard:
                 Future_Handler.t_tail = -0.5
             else:
-                Future_Handler.t_tail = max(((1.0+2*Future_Handler.rt_hard)*Future_Handler.t-2*Future_Handler.rt_hard)/(1.0+2*Future_Handler.rt_hard*(Future_Handler.t-1.0)),-0.5)
+                Future_Handler.t_tail = max(((1.0+Future_Handler.rt_hard)*Future_Handler.t-Future_Handler.rt_hard)/(1.0+Future_Handler.rt_hard*(Future_Handler.t-1.0)),-0.5)
 	f_exp.close()
 
     def get_handler(self):
@@ -54,10 +54,10 @@ class Future_Manager(object):
                 self.current_handler = self.handler_w
             elif Future_Handler.t > Future_Handler.t_head:
                 self.current_handler = self.handler_t
-                if -Future_Handler.t_b <= 2*Future_Handler.step_hard:
+                if -min(Future_Handler.t_f,Future_Handler.t_b) <= Future_Handler.step_hard:
                     Future_Handler.t_tail = -0.5
                 else:
-                    Future_Handler.t_tail = max(((1.0+2*Future_Handler.rt_hard)*Future_Handler.t-2*Future_Handler.rt_hard)/(1.0+2*Future_Handler.rt_hard*(Future_Handler.t-1.0)),-0.5)
+                    Future_Handler.t_tail = max(((1.0+Future_Handler.rt_hard)*Future_Handler.t-Future_Handler.rt_hard)/(1.0+Future_Handler.rt_hard*(Future_Handler.t-1.0)),-0.5)
             print (self.current_handler.tip,Future_Handler.t,Future_Handler.t_head)
         elif self.current_handler.tip == 'w':
             if Future_Handler.forward_goods + Future_Handler.backward_goods + Future_Handler.goods < Future_Handler.surplus_endure * Future_Handler.limit_size:
@@ -68,32 +68,32 @@ class Future_Manager(object):
 
     def run(self):
         self.get_handler()
-        try:
-            self.current_handler.get_flag();
-            self.current_handler.put_position();
-        except Exception as e:
-            print("Exception when calling FuturesApi: %s\n" % e)
-            dic_clear = True
-
-            try:
-                body_dic = json.loads(e.body)
-            except Exception:
-                send_email(e)
-                dic_clear = False
-
-            if dic_clear:
-                e_sig = True
-                if 'label' in body_dic:
-                    if body_dic['label'] in ['ORDER_POC_IMMEDIATE','ORDER_NOT_FOUND','INCREASE_POSITION','INSUFFICIENT_AVAILABLE']:
-                        e_sig = False
-                    else:
-                        e_sig = True
-                if e_sig and 'detail' in body_dic:
-                    if body_dic['detail'] == 'invalid argument: #3':
-                        e_sig = False
-                    else:
-                        e_sig = True
-                if e_sig:
-                    print ('e_sig')
-                    send_email(e)
+#        try:
+        self.current_handler.get_flag();
+        self.current_handler.put_position();
+#        except Exception as e:
+#            print("Exception when calling FuturesApi: %s\n" % e)
+#            dic_clear = True
+#
+#            try:
+#                body_dic = json.loads(e.body)
+#            except Exception:
+#                send_email(e)
+#                dic_clear = False
+#
+#            if dic_clear:
+#                e_sig = True
+#                if 'label' in body_dic:
+#                    if body_dic['label'] in ['ORDER_POC_IMMEDIATE','ORDER_NOT_FOUND','INCREASE_POSITION','INSUFFICIENT_AVAILABLE']:
+#                        e_sig = False
+#                    else:
+#                        e_sig = True
+#                if e_sig and 'detail' in body_dic:
+#                    if body_dic['detail'] == 'invalid argument: #3':
+#                        e_sig = False
+#                    else:
+#                        e_sig = True
+#                if e_sig:
+#                    print ('e_sig')
+#                    send_email(e)
 
