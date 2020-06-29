@@ -21,9 +21,10 @@ class Future_Handler(object):
     quanto = None
     balance_rt = 1.0
     goods = 0.002808424581 
-    goods_w = 0.0
+    goods_w = -0.660877315067
     forward_goods = 0.0
     backward_goods = 0.0
+    limit_goods = 0.0
     catch = False
     balance = False
     t = 0.0

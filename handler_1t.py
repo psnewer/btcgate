@@ -126,7 +126,13 @@ class Handler_1T(Future_Handler):
             Future_Handler.backward_goods = 0.0
         else:
             Future_Handler.backward_goods = float(self.backward_positions._value)*(self.backward_entry_price-self.bid_1)/self.backward_entry_price
-            
+        if self.forward_position_size > 0:
+            Future_Handler.limit_goods = float(self.forward_positions._value)*self.limit_size/self.forward_position_size
+        elif self.backward_position_size < 0:
+            Future_Handler.limit_goods = float(self.backward_positions._value)*self.limit_size/abs(self.backward_position_size)
+        else:
+            Future_Handler.limit_goods = 0.0
+
         if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
             Future_Handler._T = abs(float(self.backward_position_size) / float(self.forward_position_size))
         elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:
