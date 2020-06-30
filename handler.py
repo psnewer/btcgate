@@ -20,8 +20,8 @@ class Future_Handler(object):
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 0.002808424581 
-    goods_w = -0.660877315067
+    goods = 0.0 
+    goods_w = -0.0
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
