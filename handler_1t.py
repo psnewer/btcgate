@@ -4,6 +4,7 @@ from __future__ import print_function
 import requests
 import time
 import math
+import numpy as np
 import gate_api
 from gate_api import FuturesOrder
 from gate_api import FuturesPriceTriggeredOrder
@@ -21,12 +22,14 @@ class Handler_1T(Future_Handler):
         forward_orders = forward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)
         backward_orders = backward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)
         candles=backward_api_instance.list_futures_candlesticks(contract=Future_Handler.contract,settle=Future_Handler.settle,interval='1m',async_req=True)
+        candles_5m=backward_api_instance.list_futures_candlesticks(contract=Future_Handler.contract,settle=Future_Handler.settle,interval='5m',async_req=True)
         book = backward_api_instance.list_futures_order_book(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
         forward_positions = forward_api_instance.get_position(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
         backward_positions = backward_api_instance.get_position(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
         self.forward_orders = forward_orders.get()
         self.backward_orders = backward_orders.get()
         candlesticks = candles.get()
+        candlesticks_5m = candles_5m.get()
         self.book = book.get()
         self.forward_positions = forward_positions.get()
         self.backward_positions = backward_positions.get()
@@ -51,8 +54,8 @@ class Handler_1T(Future_Handler):
             self.backward_entry_price = self.ask_1
         self.entry_gap = self.forward_entry_price - self.backward_entry_price
    
-        Future_Handler.rt_soft = Future_Handler.step_soft/self.entry_gap
-        Future_Handler.rt_hard = Future_Handler.step_hard/self.entry_gap
+#        Future_Handler.rt_soft = Future_Handler.step_soft/self.entry_gap
+#        Future_Handler.rt_hard = Future_Handler.step_hard/self.entry_gap
         
         if self.forward_position_size > 0 and self.forward_entry_price > 0:
             Future_Handler.t_f = self.ask_1 - self.forward_entry_price
@@ -78,45 +81,41 @@ class Handler_1T(Future_Handler):
             elif (c - o)/self.ask_1 < -0.001:
 #                if (self.ask_1 - c)/self.ask_1 < 0.001:
                 self.backward_stable_price = False
-#        if len(candlesticks) > 0:
-#            o = float(candlesticks[len(candlesticks)-1]._o)
-#            c = float(candlesticks[len(candlesticks)-1]._c)
-#            if abs(o - c)/self.bid_1 < 0.001 or o > c:
-#                self.forward_stable_price = True
-#            else:
-#                self.forward_stable_price = False
-#            if abs(o - c)/self.ask_1 < 0.001 or o < c:
-#                self.backward_stable_price = True
-#            else:
-#                self.backward_stable_price = False
-#        else:
-#            self.forward_stable_price = False
-#            self.backward_stable_price = False
+
+        std_mom = 0.0005
+        if len(candlesticks_5m) > 10:
+            sum = []
+            for i in range(2,12):
+                o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
+                c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
+                sum.append(abs(c - o))
+            std_mom = np.median(sum)
+
+        Future_Handler.step_soft = std_mom
+        Future_Handler.step_hard = 10.0 * std_mom
+        Future_Handler.rt_soft = Future_Handler.step_soft/self.entry_gap
+        Future_Handler.rt_hard = Future_Handler.step_hard/self.entry_gap
 
         if Future_Handler.forward_account_from == 0:
             Future_Handler.forward_account_from = int(time.time())
         if Future_Handler.backward_account_from == 0:
             Future_Handler.backward_account_from = int(time.time())
-        forward_account_book = forward_api_instance.list_futures_account_book(settle=Future_Handler.settle,_from=Future_Handler.forward_account_from,type='pnl')
-        backward_account_book = backward_api_instance.list_futures_account_book(settle=Future_Handler.settle,_from=Future_Handler.backward_account_from,type='pnl')
+        forward_account_book = forward_api_instance.list_futures_account_book(settle=Future_Handler.settle,_from=Future_Handler.forward_account_from)
+        backward_account_book = backward_api_instance.list_futures_account_book(settle=Future_Handler.settle,_from=Future_Handler.backward_account_from)
         for item in forward_account_book:
             if Future_Handler.contract in item.text:
-                if float(item.change) > 0.0:
-                    Future_Handler.goods += float(item.change) * Future_Handler.balance_rt
-                else:
-                    Future_Handler.goods += float(item.change)
+                Future_Handler.goods += float(item.change)
+                if item.type == 'pnl':
+                    Future_Handler.balance_overflow += float(item.change)
         for item in backward_account_book:
             if Future_Handler.contract in item.text:
-                if float(item.change) > 0.0:
-                    Future_Handler.goods += float(item.change) * Future_Handler.balance_rt
-                else:
-                    Future_Handler.goods += float(item.change)
+                Future_Handler.goods += float(item.change)
+                if item.type == 'pnl':
+                    Future_Handler.balance_overflow += float(item.change)
         if len(forward_account_book) > 0:
             Future_Handler.forward_account_from = int(forward_account_book[0]._time) + 1
         if len(backward_account_book) > 0:
             Future_Handler.backward_account_from = int(backward_account_book[0]._time) + 1
-
-        Future_Handler.balance_overflow = 1.0 * Future_Handler.goods
 
         if self.forward_entry_price == 0:
             Future_Handler.forward_goods = 0.0
@@ -194,7 +193,7 @@ class Handler_1T(Future_Handler):
                 Future_Handler.S_dn_t = (1.0+Future_Handler.rt_soft)*Future_Handler.S_-Future_Handler.rt_soft*Future_Handler._T
                 Future_Handler.S_up = (1.0-Future_Handler.rt_soft)*Future_Handler.S_+Future_Handler.rt_soft*Future_Handler._T
                 Future_Handler.S_up_t = (1.0-2*Future_Handler.rt_soft)*Future_Handler.S_+2*Future_Handler.rt_soft*Future_Handler._T
-            print ('balance',Future_Handler.t,Future_Handler.t_up,Future_Handler.t_dn)
+            print ('balance',Future_Handler.t,Future_Handler.t_up_S,Future_Handler.t_up,Future_Handler.t_dn,Future_Handler.t_dn_S)
         elif not Future_Handler.balance and Future_Handler.catch:
             if Future_Handler.S_ >= Future_Handler.S_up_t:
                 Future_Handler.catch = False
@@ -210,13 +209,20 @@ class Handler_1T(Future_Handler):
                 Future_Handler.t_up = (1.0-Future_Handler.rt_soft)*Future_Handler.t+Future_Handler.rt_soft
                 Future_Handler.t_dn_S = (1.0+Future_Handler.rt_soft)*Future_Handler.t-Future_Handler.rt_soft
                 Future_Handler.t_up_S = (1.0-2*Future_Handler.rt_soft)*Future_Handler.t+2*Future_Handler.rt_soft
-            print ('catch',Future_Handler.S_,Future_Handler.S_up,Future_Handler.S_dn)
+            print ('catch',Future_Handler.S_,Future_Handler.S_up_t,Future_Handler.S_up,Future_Handler.S_dn,Future_Handler.S_dn_t)
         elif not Future_Handler.balance and not Future_Handler.catch:
-            Future_Handler.balance = True
-            Future_Handler.t_up = (1.0-Future_Handler.rt_soft)*Future_Handler.t+Future_Handler.rt_soft
-            Future_Handler.t_dn = (1.0+Future_Handler.rt_soft)*Future_Handler.t-Future_Handler.rt_soft
-            Future_Handler.t_up_S = (1.0-2*Future_Handler.rt_soft)*Future_Handler.t+2*Future_Handler.rt_soft
-            Future_Handler.t_dn_S = (1.0+2*Future_Handler.rt_soft)*Future_Handler.t-2*Future_Handler.rt_soft
+            if self.forward_position_size == 0 or self.backward_position_size == 0:
+                Future_Handler.catch = True
+                Future_Handler.S_dn = Future_Handler.S_
+                Future_Handler.S_dn_t = -Future_Handler.rt_soft
+                Future_Handler.S_up = Future_Handler.rt_soft
+                Future_Handler.S_up_t = 2*Future_Handler.rt_soft
+            else:
+                Future_Handler.balance = True
+                Future_Handler.t_up = (1.0-Future_Handler.rt_soft)*Future_Handler.t+Future_Handler.rt_soft
+                Future_Handler.t_dn = (1.0+Future_Handler.rt_soft)*Future_Handler.t-Future_Handler.rt_soft
+                Future_Handler.t_up_S = (1.0-2*Future_Handler.rt_soft)*Future_Handler.t+2*Future_Handler.rt_soft
+                Future_Handler.t_dn_S = (1.0+2*Future_Handler.rt_soft)*Future_Handler.t-2*Future_Handler.rt_soft
 
         self.forward_gap_balance = False
         self.forward_balance_size = 0
@@ -306,7 +312,7 @@ class Handler_1T(Future_Handler):
         self.backward_catch = False
         self.backward_catch_size = 0
         print ('aaaa')
-        print (Future_Handler.balance_overflow)
+        print (Future_Handler.goods,Future_Handler.balance_overflow)
         print (Future_Handler._T,Future_Handler.T_std)
         if Future_Handler.catch:
             if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
@@ -393,17 +399,9 @@ class Handler_1T(Future_Handler):
                 if self.forward_catch and self.forward_catch_size > 0:
                     forward_api_instance.create_futures_order(settle=Future_Handler.settle,futures_order=FuturesOrder(contract=Future_Handler.contract,size = self.forward_catch_size, price = self.bid_1,tif='poc'))
         if not self.forward_reduce_clear and self.forward_gap_balance:
-            if self.forward_gap >= 0.0 and self.forward_position_size > 0:
+            if self.forward_position_size > 0:
                 if self.forward_balance_size < 0:
                     forward_api_instance.create_futures_order(settle=Future_Handler.settle,futures_order=FuturesOrder(contract=Future_Handler.contract,size=self.forward_balance_size,price = self.ask_1,tif='poc'))
-            elif self.forward_gap < 0.0 and self.forward_position_size > 0:
-                if self.forward_balance_size < 0:
-#                    if self.sleep_clear:
-                    forward_api_instance.create_futures_order(settle=Future_Handler.settle,futures_order=FuturesOrder(contract=Future_Handler.contract,size = self.forward_balance_size, price = self.ask_1,tif='poc'))
-#                        self.sleep_clear = False
-#                    else:
-#                        time.sleep(30)
-#                        self.sleep_clear = True
 
         self.backward_increase_clear = False
         self.backward_reduce_clear = False
@@ -433,17 +431,9 @@ class Handler_1T(Future_Handler):
                 if self.backward_catch and self.backward_catch_size < 0:
                     backward_api_instance.create_futures_order(settle=Future_Handler.settle,futures_order=FuturesOrder(contract=Future_Handler.contract,size = self.backward_catch_size, price = self.ask_1,tif='poc'))
         if not self.backward_reduce_clear and self.backward_gap_balance:
-            if self.backward_gap >= 0.0 and self.backward_position_size < 0:
+            if self.backward_position_size < 0:
                 if self.backward_balance_size > 0:
                     backward_api_instance.create_futures_order(settle=Future_Handler.settle,futures_order=FuturesOrder(contract=Future_Handler.contract,size=self.backward_balance_size,price = self.bid_1,tif='poc'))
-            elif self.backward_gap < 0.0 and self.backward_position_size < 0:
-                if self.backward_balance_size > 0:
-#                    if self.sleep_clear:
-                    backward_api_instance.create_futures_order(settle=Future_Handler.settle,futures_order=FuturesOrder(contract=Future_Handler.contract,size = self.backward_balance_size, price = self.bid_1,tif='poc'))
-#                        self.sleep_clear = False
-#                    else:
-#                        time.sleep(30)
-#                        self.sleep_clear = True
 
         if self.forward_liq_flag:
             forward_api_instance.cancel_price_triggered_order_list(contract=Future_Handler.contract,settle=Future_Handler.settle)

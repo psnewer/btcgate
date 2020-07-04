@@ -4,6 +4,7 @@ from __future__ import print_function
 import requests
 import time
 import math
+import numpy as np
 import gate_api
 from gate_api import FuturesOrder
 from gate_api import FuturesPriceTriggeredOrder
@@ -13,15 +14,14 @@ from gate_api.rest import ApiException
 from conf import *
 
 class Future_Handler(object):
-    balance_overflow = 0.0
+    balance_overflow = 0.003442357518
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 0.0 
-    goods_w = -0.0
+    goods = 0.023058012518
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
@@ -71,12 +71,14 @@ class Future_Handler(object):
         forward_orders = forward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)
         backward_orders = backward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)
         candles=backward_api_instance.list_futures_candlesticks(contract=Future_Handler.contract,settle=Future_Handler.settle,interval='1m',async_req=True)
+        candles_5m=backward_api_instance.list_futures_candlesticks(contract=Future_Handler.contract,settle=Future_Handler.settle,interval='5m',async_req=True)
         book = backward_api_instance.list_futures_order_book(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
         forward_positions = forward_api_instance.get_position(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
         backward_positions = backward_api_instance.get_position(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
         self.forward_orders = forward_orders.get()
         self.backward_orders = backward_orders.get()
         candlesticks = candles.get()
+        candlesticks_5m = candles_5m.get()
         self.book = book.get()
         self.forward_positions = forward_positions.get()
         self.backward_positions = backward_positions.get()
@@ -138,6 +140,20 @@ class Future_Handler(object):
             self.forward_stable_price = False
             self.backward_stable_price = False
 
+        std_mom = 0.0005
+        if len(candlesticks_5m) > 10:
+            sum = []
+            for i in range(2,12):
+                o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
+                c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
+                sum.append(abs(c - o))
+            std_mom = np.median(sum)
+
+        Future_Handler.step_soft = 2.0 * std_mom
+        Future_Handler.step_hard = 10.0 * std_mom
+        Future_Handler.rt_soft = Future_Handler.step_soft/self.entry_gap
+        Future_Handler.rt_hard = Future_Handler.step_hard/self.entry_gap
+
         if Future_Handler.forward_account_from == 0:
             Future_Handler.forward_account_from = int(time.time())
         if Future_Handler.backward_account_from == 0:
@@ -160,8 +176,6 @@ class Future_Handler(object):
             Future_Handler.forward_account_from = int(forward_account_book[0]._time) + 1
         if len(backward_account_book) > 0:
             Future_Handler.backward_account_from = int(backward_account_book[0]._time) + 1
-
-        Future_Handler.balance_overflow = 1.0 * Future_Handler.goods
 
         if self.forward_entry_price == 0:
             Future_Handler.forward_goods = 0.0
