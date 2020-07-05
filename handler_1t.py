@@ -23,6 +23,7 @@ class Handler_1T(Future_Handler):
         backward_orders = backward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)
         candles=backward_api_instance.list_futures_candlesticks(contract=Future_Handler.contract,settle=Future_Handler.settle,interval='1m',async_req=True)
         candles_5m=backward_api_instance.list_futures_candlesticks(contract=Future_Handler.contract,settle=Future_Handler.settle,interval='5m',async_req=True)
+        candles_1h=backward_api_instance.list_futures_candlesticks(contract=Future_Handler.contract,settle=Future_Handler.settle,interval='1h',async_req=True)
         book = backward_api_instance.list_futures_order_book(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
         forward_positions = forward_api_instance.get_position(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
         backward_positions = backward_api_instance.get_position(contract=Future_Handler.contract,settle=Future_Handler.settle,async_req=True)
@@ -30,6 +31,7 @@ class Handler_1T(Future_Handler):
         self.backward_orders = backward_orders.get()
         candlesticks = candles.get()
         candlesticks_5m = candles_5m.get()
+        candlesticks_1h = candles_1h.get()
         self.book = book.get()
         self.forward_positions = forward_positions.get()
         self.backward_positions = backward_positions.get()
@@ -82,19 +84,44 @@ class Handler_1T(Future_Handler):
 #                if (self.ask_1 - c)/self.ask_1 < 0.001:
                 self.backward_stable_price = False
 
-        std_mom = 0.0005
+        std_mom = 10
         if len(candlesticks_5m) > 10:
             sum = []
             for i in range(2,12):
                 o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
                 c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
                 sum.append(abs(c - o))
-            std_mom = np.median(sum)
+            std_mom = np.max(sum)
+
+        std_max = 100
+        if len(candlesticks_1h) > 10:
+            sum = []
+            for i in range(2,12):
+                o = float(candlesticks_1h[len(candlesticks_1h)-i]._o)
+                c = float(candlesticks_1h[len(candlesticks_1h)-i]._c)
+                sum.append(abs(c - o))
+            std_max = np.max(sum)
+        print('mom',std_mom,std_max)
 
         Future_Handler.step_soft = std_mom
-        Future_Handler.step_hard = 10.0 * std_mom
+        Future_Handler.step_hard = std_max
         Future_Handler.rt_soft = Future_Handler.step_soft/self.entry_gap
         Future_Handler.rt_hard = Future_Handler.step_hard/self.entry_gap
+
+        if self.forward_entry_price == 0:
+            Future_Handler.forward_goods = 0.0
+        else:
+            Future_Handler.forward_goods = float(self.forward_positions._value)*(self.ask_1-self.forward_entry_price)/self.forward_entry_price
+        if self.backward_entry_price == 0:
+            Future_Handler.backward_goods = 0.0
+        else:
+            Future_Handler.backward_goods = float(self.backward_positions._value)*(self.backward_entry_price-self.bid_1)/self.backward_entry_price
+        if self.forward_position_size > 0:
+            Future_Handler.limit_goods = float(self.forward_positions._value)*self.limit_size/self.forward_position_size
+        elif self.backward_position_size < 0:
+            Future_Handler.limit_goods = float(self.backward_positions._value)*self.limit_size/abs(self.backward_position_size)
+        else:
+            Future_Handler.limit_goods = 0.0
 
         if Future_Handler.forward_account_from == 0:
             Future_Handler.forward_account_from = int(time.time())
@@ -116,22 +143,7 @@ class Handler_1T(Future_Handler):
             Future_Handler.forward_account_from = int(forward_account_book[0]._time) + 1
         if len(backward_account_book) > 0:
             Future_Handler.backward_account_from = int(backward_account_book[0]._time) + 1
-
-        if self.forward_entry_price == 0:
-            Future_Handler.forward_goods = 0.0
-        else:
-            Future_Handler.forward_goods = float(self.forward_positions._value)*(self.ask_1-self.forward_entry_price)/self.forward_entry_price
-        if self.backward_entry_price == 0:
-            Future_Handler.backward_goods = 0.0
-        else:
-            Future_Handler.backward_goods = float(self.backward_positions._value)*(self.backward_entry_price-self.bid_1)/self.backward_entry_price
-        if self.forward_position_size > 0:
-            Future_Handler.limit_goods = float(self.forward_positions._value)*self.limit_size/self.forward_position_size
-        elif self.backward_position_size < 0:
-            Future_Handler.limit_goods = float(self.backward_positions._value)*self.limit_size/abs(self.backward_position_size)
-        else:
-            Future_Handler.limit_goods = 0.0
-
+       
         if self.forward_gap < 0.0 and self.backward_gap >= 0.0:
             Future_Handler._T = abs(float(self.backward_position_size) / float(self.forward_position_size))
         elif self.backward_gap < 0.0 and self.forward_gap >= 0.0:

@@ -14,14 +14,14 @@ from gate_api.rest import ApiException
 from conf import *
 
 class Future_Handler(object):
-    balance_overflow = 0.003442357518
+    balance_overflow = 0.0045687430124
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 0.023058012518
+    goods = 0.580012607447
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
