@@ -87,7 +87,7 @@ class Handler_1T(Future_Handler):
         std_mom = 10
         if len(candlesticks_5m) > 10:
             sum = []
-            for i in range(2,12):
+            for i in range(1,11):
                 o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
                 c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
                 sum.append(abs(c - o))
@@ -96,7 +96,7 @@ class Handler_1T(Future_Handler):
         std_max = 100
         if len(candlesticks_1h) > 10:
             sum = []
-            for i in range(2,12):
+            for i in range(1,11):
                 o = float(candlesticks_1h[len(candlesticks_1h)-i]._o)
                 c = float(candlesticks_1h[len(candlesticks_1h)-i]._c)
                 sum.append(abs(c - o))
@@ -191,6 +191,10 @@ class Handler_1T(Future_Handler):
 #            Future_Handler.T_std = 0.61
         
         if Future_Handler.balance and not Future_Handler.catch:
+            Future_Handler.t_up = min(Future_Handler.t_up,(1.0-Future_Handler.rt_soft)*Future_Handler.t+Future_Handler.rt_soft)
+            Future_Handler.t_up_S = min(Future_Handler.t_up_S,(1.0-2*Future_Handler.rt_soft)*Future_Handler.t+2*Future_Handler.rt_soft)
+            Future_Handler.t_dn = max(Future_Handler.t_dn,(1.0+Future_Handler.rt_soft)*Future_Handler.t-Future_Handler.rt_soft)
+            Future_Handler.t_dn_S = max(Future_Handler.t_dn_S,(1.0+2*Future_Handler.rt_soft)*Future_Handler.t-2*Future_Handler.rt_soft)
             if Future_Handler.t >= Future_Handler.t_up_S:
                 Future_Handler.balance = False
                 Future_Handler.catch = True
@@ -207,6 +211,10 @@ class Handler_1T(Future_Handler):
                 Future_Handler.S_up_t = (1.0-2*Future_Handler.rt_soft)*Future_Handler.S_+2*Future_Handler.rt_soft*Future_Handler._T
             print ('balance',Future_Handler.t,Future_Handler.t_up_S,Future_Handler.t_up,Future_Handler.t_dn,Future_Handler.t_dn_S)
         elif not Future_Handler.balance and Future_Handler.catch:
+            Future_Handler.S_up = min(Future_Handler.S_up,(1.0-Future_Handler.rt_soft)*Future_Handler.S_+Future_Handler.rt_soft*Future_Handler._T)
+            Future_Handler.S_up_t = min(Future_Handler.S_up_t,(1.0-2*Future_Handler.rt_soft)*Future_Handler.S_+2*Future_Handler.rt_soft*Future_Handler._T)
+            Future_Handler.S_dn = max(Future_Handler.S_dn,(1.0+Future_Handler.rt_soft)*Future_Handler.S_-Future_Handler.rt_soft*Future_Handler._T)
+            Future_Handler.S_dn_t = max(Future_Handler.S_dn_t,(1.0+2*Future_Handler.rt_soft)*Future_Handler.S_-2*Future_Handler.rt_soft*Future_Handler._T)
             if Future_Handler.S_ >= Future_Handler.S_up_t:
                 Future_Handler.catch = False
                 Future_Handler.balance = True
