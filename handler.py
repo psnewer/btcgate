@@ -14,17 +14,28 @@ from gate_api.rest import ApiException
 from conf import *
 
 class Future_Handler(object):
+<<<<<<< HEAD
     balance_overflow = 0.583248766162
+=======
+    balance_overflow = 0.0
+>>>>>>> 7125560b86f91b4b770b11526d7264b85b401658
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
+<<<<<<< HEAD
     goods = 1.31324810707
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
+=======
+    goods = 0.375777766884
+    goods_w = 0.0
+    forward_goods = 0.0
+    backward_goods = 0.0
+>>>>>>> 7125560b86f91b4b770b11526d7264b85b401658
     catch = False
     balance = False
     t = 0.0
@@ -40,6 +51,11 @@ class Future_Handler(object):
     S_dn_t = 0.0
     t_up_S = 0.0
     t_dn_S = 0.0
+<<<<<<< HEAD
+=======
+    step_soft = 10.0
+    step_hard = 100.0
+>>>>>>> 7125560b86f91b4b770b11526d7264b85b401658
     rt_soft = 0.0
     rt_hard = 0.0
     t_head = 0.0
@@ -55,6 +71,7 @@ class Future_Handler(object):
         Future_Handler.limit_size = contract_params['limit_size']
         Future_Handler.quanto = contract_params['quanto']
         Future_Handler.balance_rt = contract_params['balance_rt']
+<<<<<<< HEAD
         Future_Handler.step_soft = contract_params['step_soft']
         Future_Handler.step_hard = contract_params['step_hard']
         Future_Handler.profit_rt = contract_params['profit_rt']
@@ -66,6 +83,13 @@ class Future_Handler(object):
         Future_Handler.surplus_endure = contract_params['surplus_endure']
         Future_Handler.peak = contract_params['peak']
         Future_Handler.bottom = contract_params['bottom']
+=======
+        Future_Handler.retreat_endure = contract_params['retreat_endure']
+        Future_Handler.sow_endure = contract_params['sow_endure']
+        Future_Handler.surplus_bottom = contract_params['surplus_bottom']
+        Future_Handler.peak = contract_params['peak']
+        Future_Handler.peak = contract_params['bottom']
+>>>>>>> 7125560b86f91b4b770b11526d7264b85b401658
 
     def get_flag(self):
         forward_orders = forward_api_instance.list_futures_orders(contract=Future_Handler.contract,settle=Future_Handler.settle,status='open',async_req=True)

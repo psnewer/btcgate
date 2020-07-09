@@ -27,15 +27,21 @@ class Future_Manager(object):
             elif contracts[contr]['first_handler'] == '1t':
                 self.current_handler = Handler_1T()
             self.current_handler.get_flag()
+<<<<<<< HEAD
             Future_Handler.t_head = min(((1.0-Future_Handler.rt_hard)*Future_Handler.t+Future_Handler.rt_hard)/(1.0+Future_Handler.rt_hard*(1.0-Future_Handler.t)),1.0)
             if -min(Future_Handler.t_f,Future_Handler.t_b) <= Future_Handler.step_hard:
                 Future_Handler.t_tail = -0.5
             else:
                 Future_Handler.t_tail = max(((1.0+Future_Handler.rt_hard)*Future_Handler.t-Future_Handler.rt_hard)/(1.0+Future_Handler.rt_hard*(Future_Handler.t-1.0)),-0.5)
+=======
+            Future_Handler.t_head = min(Future_Handler.t+Future_Handler.rt_hard,3.0)
+            Future_Handler.t_tail = max(Future_Handler.t-2*Future_Handler.rt_hard,-0.5)
+>>>>>>> 7125560b86f91b4b770b11526d7264b85b401658
 	f_exp.close()
 
     def get_handler(self):
         if self.current_handler.tip == 't':
+<<<<<<< HEAD
             if Future_Handler.forward_goods+Future_Handler.backward_goods+Future_Handler.balance_overflow > Future_Handler.surplus_abandon * Future_Handler.limit_goods or Future_Handler.limit_goods == 0.0:
                 self.current_handler = Handler_W()
             elif Future_Handler.t < Future_Handler.t_tail:
@@ -51,6 +57,16 @@ class Future_Manager(object):
                     Future_Handler.t_tail = -0.5
                 else:
                     Future_Handler.t_tail = max(((1.0+Future_Handler.rt_hard)*Future_Handler.t-Future_Handler.rt_hard)/(1.0+Future_Handler.rt_hard*(Future_Handler.t-1.0)),-0.5)
+=======
+            if Future_Handler.t < Future_Handler.t_tail:
+                self.current_handler = self.handler_1t
+                Future_Handler.t_head = min(Future_Handler.t+Future_Handler.rt_hard,3.0)
+            print (self.current_handler.tip,Future_Handler.t,Future_Handler.t_tail)
+        elif self.current_handler.tip == '1t':
+            if Future_Handler.t > Future_Handler.t_head:
+                self.current_handler = self.handler_t
+                Future_Handler.t_tail = max(Future_Handler.t-2*Future_Handler.rt_hard,-0.5)
+>>>>>>> 7125560b86f91b4b770b11526d7264b85b401658
             print (self.current_handler.tip,Future_Handler.t,Future_Handler.t_head)
         elif self.current_handler.tip == 'w':
             if Future_Handler.forward_goods+Future_Handler.backward_goods+Future_Handler.balance_overflow < Future_Handler.surplus_endure * Future_Handler.limit_goods and Future_Handler.limit_goods > 0.0:
