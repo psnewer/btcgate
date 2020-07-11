@@ -8,7 +8,6 @@ import gate_api
 import sympy
 from sympy import solve,symbols,log
 from gate_api.rest import ApiException
-from handler import *
 
 # smtplib模块负责连接服务器和发送邮件
 # MIMEText：定义邮件的文字数据
@@ -90,12 +89,6 @@ def regression_2(Pf,Pb,Sf,Sb,P,T_rt,warn=True):
             res = _s.evalf() - Sb
             break
     return res
-
-def compute_ps(rt_step,ps):
-    if rt_step >= 0.0:
-        return (ps + rt_step*(1.0-ps))/(1.0+rt_step*(1.0-ps))
-    else:
-        return -0.5 if -min(Future_Handler.t_f,Future_Handler.t_b) < Future_Handler.step_soft else (ps + rt_step*(1.0+ps))/(1.0+rt_step*(1.0-ps))
 
 forward_configuration = gate_api.Forward_Configuration()
 backward_configuration = gate_api.Backward_Configuration()

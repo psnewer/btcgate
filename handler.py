@@ -14,19 +14,21 @@ from gate_api.rest import ApiException
 from conf import *
 
 class Future_Handler(object):
-    balance_overflow = 0.583248766162
+    balance_overflow = 0.949367725
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 1.31324810707
+    goods = 0.637389 
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
     catch = False
     balance = False
+    forward_sprint = False
+    backward_sprint = False
     t = 0.0
     _T = None
     T_std = None
@@ -42,10 +44,8 @@ class Future_Handler(object):
     t_dn_S = 0.0
     rt_soft = 0.0
     rt_hard = 0.0
-    t_head = 0.0
-    t_tail = 0.0
-    start_point = None
-    end_point = None
+    t_head = 0.5
+    t_tail = -0.5
 
     def __init__(self,contract = '',contract_params = {}):
 	Future_Handler.contract = contract
@@ -57,13 +57,10 @@ class Future_Handler(object):
         Future_Handler.balance_rt = contract_params['balance_rt']
         Future_Handler.step_soft = contract_params['step_soft']
         Future_Handler.step_hard = contract_params['step_hard']
-        Future_Handler.profit_rt = contract_params['profit_rt']
-        Future_Handler.predict = contract_params['predict']
-        Future_Handler.retreat_endure = contract_params['retreat_endure']
-        Future_Handler.sow_endure = contract_params['sow_endure']
         Future_Handler.surplus_abandon = contract_params['surplus_abandon']
-        Future_Handler.surplus_bottom = contract_params['surplus_bottom']
         Future_Handler.surplus_endure = contract_params['surplus_endure']
+        Future_Handler.std_mom = 0.0005
+        Future_Handler.std_sprint = 0.0015
         Future_Handler.peak = contract_params['peak']
         Future_Handler.bottom = contract_params['bottom']
 
