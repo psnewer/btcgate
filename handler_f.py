@@ -14,22 +14,12 @@ from gate_api.rest import ApiException
 from conf import *
 from handler import *
 
-class Handler_W(FH):
+class Handler_F(FH):
     def __init__(self):
-        self.tip = 'w'
+        self.tip = 'f'
 
     def get_flag(self):
         self.get_std_flag()
-        self.forward_close = 0
-        self.backward_close = 0
-        if FH.forward_gap > 0.0015:
-            self.forward_close = 2
-        elif FH.forward_gap > 0.0005:
-            self.forward_close = 1
-        if FH.backward_gap > 0.0015:
-            self.backward_close = 2
-        elif FH.backward_gap > 0.0005:
-            self.backward_close = 1
 
         if FH.forward_account_from == 0:
             FH.forward_account_from = int(time.time())
@@ -62,16 +52,17 @@ class Handler_W(FH):
         self.backward_reap = False
         self.forward_sow = False
         self.backward_sow = False
-        if FH.forward_mom:
-            if not FH.forward_sprint:
+        if FH.co < -FH.std_fin:
+            if FH.backward_sprint:
                 self.forward_sow = True
-            if self.backward_close > 0:
-                self.backward_reap = True
-        elif FH.backward_mom:
-            if not FH.backward_sprint:
+        elif FH.co > FH.std_fin:
+            if FH.forward_sprint:
                 self.backward_sow = True
-            if self.forward_close > 0:
-                self.forward_reap = True
+
+        if FH.forward_gap >= FH.std_fout:
+            self.forward_reap = True
+        elif FH.backward_gap >= FH.std_fout:
+            self.backward_reap = True
 
         self.forward_gap_balance = False
         self.backward_gap_balance = False
@@ -91,17 +82,6 @@ class Handler_W(FH):
             self.backward_catch = True
             self.backward_catch_size = -FH.limit_size - FH.backward_position_size
 
-        if self.forward_gap_balance:
-            if self.forward_close == 2:
-                self.forward_tif = 'gtc'
-            elif self.forward_close == 1:
-                self.forward_tif = 'poc'
-        elif self.backward_gap_balance:
-            if self.backward_close == 2:
-                self.backward_tif = 'gtc'
-            elif self.backward_close == 1:
-                self.backward_tif = 'poc'
-    
     def put_position(self):
         if FH.forward_leverage != FH.forward_gap_level:
             forward_api_instance.update_position_leverage(contract=FH.contract,settle=FH.settle,leverage = FH.forward_gap_level)
@@ -121,7 +101,7 @@ class Handler_W(FH):
             elif order_size < 0:
                 self.forward_reduce_clear = True
             if order_size > 0:
-                if not self.forward_catch or FH.forward_position_size >= FH.forward_limit:
+                if (not self.forward_catch) or FH.forward_position_size >= FH.forward_limit:
                     forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
                 elif self.forward_catch and self.forward_catch_size <= 0:
                     forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
@@ -129,22 +109,19 @@ class Handler_W(FH):
                     forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
             elif order_size < 0:
                 if self.forward_gap_balance:
-                    if (order_price > FH.ask_1 and self.forward_tif=='poc') or (order_price > FH.bid_1 and self.forward_tif=='gtc') or self.forward_balance_size >= 0:
+                    if order_price > FH.ask_1 or self.forward_balance_size >= 0:
                         forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
                 else:
                     forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
         if not self.forward_increase_clear:
             if FH.forward_position_size < FH.forward_limit:
                 if self.forward_catch and self.forward_catch_size > 0:
-                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.ask_1,tif='gtc'))
+                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.bid_1,tif='poc'))
         if not self.forward_reduce_clear and self.forward_gap_balance:
             if FH.forward_position_size > 0:
                 if self.forward_balance_size < 0:
-                    if self.forward_tif == 'poc':
-                        forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.forward_balance_size,price = FH.ask_1,tif='poc'))
-                    elif self.forward_tif == 'gtc':
-                        forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.forward_balance_size,price = FH.bid_1,tif='gtc'))
-                        
+                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.forward_balance_size,price = FH.ask_1,tif='poc'))
+
         self.backward_increase_clear = False
         self.backward_reduce_clear = False
         for order in FH.backward_orders:
@@ -156,7 +133,7 @@ class Handler_W(FH):
             elif order_size > 0:
                 self.backward_reduce_clear = True
             if order_size < 0:
-                if not self.backward_catch or abs(FH.backward_position_size) >= FH.backward_limit:
+                if (not self.backward_catch) or abs(FH.backward_position_size) >= FH.backward_limit:
                     backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
                 elif self.backward_catch and self.backward_catch_size >= 0:
                     backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
@@ -164,21 +141,18 @@ class Handler_W(FH):
                     backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
             elif order_size > 0:
                 if self.backward_gap_balance:
-                    if (order_price < FH.bid_1 and self.backward_tif=='poc') or (order_price < FH.ask_1 and self.backward_tif=='gtc') or self.backward_balance_size <= 0:
+                    if order_price < FH.bid_1 or self.backward_balance_size <= 0:
                         backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
                 else:
                     backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
         if not self.backward_increase_clear:
             if abs(FH.backward_position_size) < FH.backward_limit:
                 if self.backward_catch and self.backward_catch_size < 0:
-                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.bid_1,tif='gtc'))
+                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.ask_1,tif='poc'))
         if not self.backward_reduce_clear and self.backward_gap_balance:
             if FH.backward_position_size < 0:
                 if self.backward_balance_size > 0:
-                    if self.backward_tif == 'poc':
-                        backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.backward_balance_size,price = FH.bid_1,tif='poc'))
-                    elif self.backward_tif == 'gtc':
-                        backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.backward_balance_size,price = FH.ask_1,tif='gtc'))
+                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.backward_balance_size,price = FH.bid_1,tif='poc'))
 
         if FH.forward_liq_flag:
             forward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle)
