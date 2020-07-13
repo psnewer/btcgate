@@ -7,6 +7,8 @@ from conf import *
 from handler import *
 from handler_t import *
 from handler_1t import *
+from handler_w import *
+from handler_f import *
 import json
 import gflags
 import codecs
@@ -20,30 +22,45 @@ class Future_Manager(object):
 	data_algs = json.load(f_exp)
 	contracts = data_algs['contract']
 	for contr in contracts:
-	    self.handler = Future_Handler(contr,contracts[contr])
+	    self.handler = FH(contr,contracts[contr])
             self.handler_t = Handler_T()
             self.handler_1t = Handler_1T()
+            self.handler_w = Handler_W()
+            self.handler_f = Handler_F()
             if contracts[contr]['first_handler'] == 't':
                 self.current_handler = self.handler_t
             elif contracts[contr]['first_handler'] == '1t':
                 self.current_handler = self.handler_1t
-            self.current_handler.get_flag()
-            Future_Handler.t_head = min(Future_Handler.t+Future_Handler.rt_hard,3.0)
-            Future_Handler.t_tail = max(Future_Handler.t-2*Future_Handler.rt_hard,-0.5)
+            elif contracts[contr]['first_handler'] == 'w':
+                self.current_handler = self.handler_w
+            elif contracts[contr]['first_handler'] == 'f':
+                self.current_handler = self.handler_f
+            self.handler.get_std_flag()
 	f_exp.close()
 
     def get_handler(self):
-        if self.current_handler.tip == 't':
-            if Future_Handler.t < Future_Handler.t_tail:
-                self.current_handler = self.handler_1t
-                Future_Handler.t_head = min(Future_Handler.t+Future_Handler.rt_hard,3.0)
-            print (self.current_handler.tip,Future_Handler.t,Future_Handler.t_tail)
-        elif self.current_handler.tip == '1t':
-            if Future_Handler.t > Future_Handler.t_head:
+        print ('aaaa',self.current_handler.tip)
+        print (FH.goods,FH.balance_overflow,FH.forward_goods+FH.backward_goods+FH.balance_overflow,FH.surplus_abandon * FH.limit_goods)
+        if FH.forward_goods+FH.backward_goods+FH.balance_overflow < FH.surplus_abandon * FH.limit_goods:
+            if self.current_handler.tip == 't':
+                if FH.t < FH.t_tail:
+                    self.current_handler = self.handler_1t
+                print (self.current_handler.tip,FH.t,FH.t_tail)
+            elif self.current_handler.tip == '1t':
+                if FH.t > FH.t_head:
+                    self.current_handler = self.handler_t
+                print (self.current_handler.tip,FH.t,FH.t_head)
+            else:
                 self.current_handler = self.handler_t
-                Future_Handler.t_tail = max(Future_Handler.t-2*Future_Handler.rt_hard,-0.5)
-            print (self.current_handler.tip,Future_Handler.t,Future_Handler.t_head)
-        print (self.current_handler.tip,Future_Handler.S_,Future_Handler.S_up,Future_Handler.S_dn)
+        elif FH.forward_goods+FH.backward_goods+FH.balance_overflow >= FH.surplus_endure * FH.limit_goods or FH.limit_goods == 0.0:
+            if self.current_handler.tip == 'w':
+                if (FH.forward_sprint and FH.forward_mom) or (FH.backward_sprint and FH.backward_mom):
+                    self.current_handler = self.handler_f
+            elif self.current_handler.tip == 'f':
+                if (FH.forward_sprint and FH.backward_mom) or (FH.backward_sprint and FH.forward_mom):
+                    self.current_handler = self.handler_w
+            else:
+                self.current_handler = self.handler_f
 
     def run(self):
         self.get_handler()
