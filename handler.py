@@ -14,22 +14,22 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = 1.585421725
+    balance_overflow = 1.687421725
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 1.403617335 
+    goods = 1.580786585 
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
     catch = False
     balance = False
-    forward_sprint = True
-    backward_sprint = False
-    forward_band_price = 9279.0
+    forward_sprint = False
+    backward_sprint = True
+    forward_band_price = 9313.7
     backward_band_price = -1.0
     t = 0.0
     _T = None
