@@ -14,14 +14,14 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = 1.687421725
+    balance_overflow = 0.0056224079049
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 1.580786585 
+    goods = 1.004367237
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
@@ -29,8 +29,8 @@ class FH(object):
     balance = False
     forward_sprint = False
     backward_sprint = True
-    forward_band_price = 9313.7
-    backward_band_price = -1.0
+    forward_band_price = -1.0
+    backward_band_price = 9146.0
     t = 0.0
     _T = None
     T_std = None
@@ -46,8 +46,8 @@ class FH(object):
     t_dn_S = 0.0
     rt_soft = 0.0
     rt_hard = 0.0
-    t_head = 0.5
-    t_tail = -0.5
+    t_head = 1.0
+    t_tail = -1.0
 
     def __init__(self,contract = '',contract_params = {}):
 	FH.contract = contract
@@ -104,8 +104,6 @@ class FH(object):
             FH.backward_entry_price = FH.ask_1
         FH.entry_gap = FH.forward_entry_price - FH.backward_entry_price
 
-        FH.rt_soft = FH.step_soft/FH.entry_gap
-        FH.rt_hard = FH.step_hard/FH.entry_gap
 
         if FH.forward_position_size > 0 and FH.forward_entry_price > 0:
             FH.t_f = FH.ask_1 - FH.forward_entry_price
@@ -125,10 +123,10 @@ class FH(object):
         if len(candlesticks) > 0:
             o = float(candlesticks[len(candlesticks)-1]._o)
             c = float(candlesticks[len(candlesticks)-1]._c)
-            if (c - o)/o > 0.001:
+            if (c - o) > 10.0:
 #                if (self.bid_1 - c)/self.bid_1 > -0.001:
                 FH.forward_stable_price = False
-            elif (c - o)/o < -0.001:
+            elif (c - o) < -10.0:
 #                if (self.ask_1 - c)/self.ask_1 < 0.001:
                 FH.backward_stable_price = False
 
@@ -138,7 +136,7 @@ class FH(object):
         if len(candlesticks_5m) > 0:
             o = float(candlesticks_5m[len(candlesticks_5m)-1]._o)
             c = float(candlesticks_5m[len(candlesticks_5m)-1]._c)
-            FH.co = (c - o)/o
+            FH.co = (c - o)
             if FH.co >= FH.std_mom:
                 FH.forward_mom = True
             elif FH.co <= -FH.std_mom:
@@ -147,17 +145,33 @@ class FH(object):
             print(FH.backward_mom,FH.co,FH.backward_sprint)
             print(FH.forward_band_price,FH.backward_band_price)
 
+#        FH.step_soft = 10.0
+#        if len(candlesticks_5m) > 10:
+#            abs5m = []
+#            for i in range(1,11):
+#                o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
+#                c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
+#                abs5m.append(abs(c - o))
+#            abs5m = np.nan_to_num(abs5m)
+#            std_med = np.median(abs5m)
+#            std_smom = np.mean(filter(lambda x:x > std_med,abs5m))
+#            FH.step_soft = std_smom
+#         
+#        print (FH.step_soft)
+        FH.rt_soft = FH.step_soft/FH.entry_gap
+        FH.rt_hard = FH.step_hard/FH.entry_gap
+
         if FH.forward_mom:
             if FH.forward_band_price < 0.0:
                 FH.forward_band_price = FH.ask_1
-            if FH.backward_band_price > 0 and (FH.backward_band_price - FH.ask_1)/FH.backward_band_price >= FH.std_sprint:
+            if FH.backward_band_price > 0 and (FH.backward_band_price - FH.ask_1) >= FH.std_sprint:
                 FH.forward_sprint = False
                 FH.backward_sprint = True
             FH.backward_band_price = -1.0
         elif FH.backward_mom:
             if FH.backward_band_price < 0.0:
                 FH.backward_band_price = FH.bid_1
-            if FH.forward_band_price > 0 and (FH.bid_1 - FH.forward_band_price)/FH.forward_band_price >= FH.std_sprint:
+            if FH.forward_band_price > 0 and (FH.bid_1 - FH.forward_band_price) >= FH.std_sprint:
                 FH.backward_sprint = False
                 FH.forward_sprint = True
             FH.forward_band_price = -1.0

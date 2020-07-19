@@ -31,18 +31,12 @@ class Handler_F(FH):
             if FH.contract in item.text:
                 FH.goods += float(item.change)
                 if item.type == 'pnl':
-                    if FH.forward_goods+FH.backward_goods+FH.balance_overflow < FH.surplus_endure * FH.limit_goods: 
-                        FH.balance_overflow += float(item.change)
-                    else:
-                        FH.balance_overflow += float(item.change) * FH.balance_rt
+                    FH.balance_overflow += float(item.change) * FH.balance_rt
         for item in backward_account_book:
             if FH.contract in item.text:
                 FH.goods += float(item.change)
                 if item.type == 'pnl':
-                    if FH.forward_goods+FH.backward_goods+FH.balance_overflow < FH.surplus_endure * FH.limit_goods:
-                        FH.balance_overflow += float(item.change)
-                    else:
-                        FH.balance_overflow += float(item.change) * FH.balance_rt
+                    FH.balance_overflow += float(item.change) * FH.balance_rt
         if len(forward_account_book) > 0:
             FH.forward_account_from = int(forward_account_book[0]._time) + 1
         if len(backward_account_book) > 0:

@@ -41,18 +41,12 @@ class Handler_W(FH):
             if FH.contract in item.text:
                 FH.goods += float(item.change)
                 if item.type == 'pnl':
-                    if FH.forward_goods+FH.backward_goods+FH.balance_overflow < FH.surplus_endure * FH.limit_goods: 
-                        FH.balance_overflow += float(item.change)
-                    else:
-                        FH.balance_overflow += float(item.change) * FH.balance_rt
+                    FH.balance_overflow += float(item.change) * FH.balance_rt
         for item in backward_account_book:
             if FH.contract in item.text:
                 FH.goods += float(item.change)
                 if item.type == 'pnl':
-                    if FH.forward_goods+FH.backward_goods+FH.balance_overflow < FH.surplus_endure * FH.limit_goods:
-                        FH.balance_overflow += float(item.change)
-                    else:
-                        FH.balance_overflow += float(item.change) * FH.balance_rt
+                    FH.balance_overflow += float(item.change) * FH.balance_rt
         if len(forward_account_book) > 0:
             FH.forward_account_from = int(forward_account_book[0]._time) + 1
         if len(backward_account_book) > 0:
@@ -64,12 +58,14 @@ class Handler_W(FH):
         self.backward_sow = False
         if FH.forward_mom:
             if not FH.forward_sprint:
-                self.forward_sow = True
+                if FH.bid_1 <= FH.forward_band_price:
+                    self.forward_sow = True
             if self.backward_close > 0:
                 self.backward_reap = True
         elif FH.backward_mom:
             if not FH.backward_sprint:
-                self.backward_sow = True
+                if FH.ask_1 >= FH.backward_band_price:
+                    self.backward_sow = True
             if self.forward_close > 0:
                 self.forward_reap = True
 
@@ -136,7 +132,7 @@ class Handler_W(FH):
         if not self.forward_increase_clear:
             if FH.forward_position_size < FH.forward_limit:
                 if self.forward_catch and self.forward_catch_size > 0:
-                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.ask_1*1.0001,tif='ioc'))
+                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.bid_1,tif='poc'))
         if not self.forward_reduce_clear and self.forward_gap_balance:
             if FH.forward_position_size > 0:
                 if self.forward_balance_size < 0:
@@ -171,7 +167,7 @@ class Handler_W(FH):
         if not self.backward_increase_clear:
             if abs(FH.backward_position_size) < FH.backward_limit:
                 if self.backward_catch and self.backward_catch_size < 0:
-                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.bid_1*0.9999,tif='ioc'))
+                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.ask_1,tif='poc'))
         if not self.backward_reduce_clear and self.backward_gap_balance:
             if FH.backward_position_size < 0:
                 if self.backward_balance_size > 0:

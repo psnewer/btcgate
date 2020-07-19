@@ -87,54 +87,55 @@ class Handler_1T(FH):
 #        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
 #            self.T_std = 0.61
         
-        if FH.balance and not FH.catch:
-            FH.t_up = min(FH.t_up,(1.0-FH.rt_soft)*FH.t+FH.rt_soft)
-            FH.t_up_S = min(FH.t_up_S,(1.0-2*FH.rt_soft)*FH.t+2*FH.rt_soft)
-            FH.t_dn = max(FH.t_dn,(1.0+FH.rt_soft)*FH.t-FH.rt_soft)
-            FH.t_dn_S = max(FH.t_dn_S,(1.0+2*FH.rt_soft)*FH.t-2*FH.rt_soft)
-            if FH.t >= FH.t_up_S:
-                FH.balance = False
-                FH.catch = True
-                FH.S_up = FH.S_
-                FH.S_up_t = (1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T
-                FH.S_dn = (1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T
-                FH.S_dn_t = (1.0+2*FH.rt_soft)*FH.S_-2*FH.rt_soft*FH._T
-            elif FH.t <= FH.t_dn_S:
-                FH.balance = False
-                FH.catch = True
-                FH.S_dn = FH.S_
-                FH.S_dn_t = (1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T
-                FH.S_up = (1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T
-                FH.S_up_t = (1.0-2*FH.rt_soft)*FH.S_+2*FH.rt_soft*FH._T
-            print ('balance',FH.t,FH.t_up_S,FH.t_up,FH.t_dn,FH.t_dn_S)
-        elif not FH.balance and FH.catch:
-            FH.S_up = min(FH.S_up,(1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T)
-            FH.S_up_t = min(FH.S_up_t,(1.0-2*FH.rt_soft)*FH.S_+2*FH.rt_soft*FH._T)
-            FH.S_dn = max(FH.S_dn,(1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T)
-            FH.S_dn_t = max(FH.S_dn_t,(1.0+2*FH.rt_soft)*FH.S_-2*FH.rt_soft*FH._T)
-            if FH.S_ >= FH.S_up_t:
-                FH.catch = False
-                FH.balance = True
-                FH.t_up = FH.t
-                FH.t_dn = (1.0+FH.rt_soft)*FH.t-FH.rt_soft
-                FH.t_up_S = (1.0-FH.rt_soft)*FH.t+FH.rt_soft
-                FH.t_dn_S = (1.0+2*FH.rt_soft)*FH.t-2*FH.rt_soft
-            elif FH.S_ <= FH.S_dn_t:
-                FH.catch = False
-                FH.balance = True
-                FH.t_dn = FH.t
-                FH.t_up = (1.0-FH.rt_soft)*FH.t+FH.rt_soft
-                FH.t_dn_S = (1.0+FH.rt_soft)*FH.t-FH.rt_soft
-                FH.t_up_S = (1.0-2*FH.rt_soft)*FH.t+2*FH.rt_soft
-            print ('catch',FH.S_,FH.S_up_t,FH.S_up,FH.S_dn,FH.S_dn_t)
-        elif not FH.balance and not FH.catch:
-            if FH.forward_position_size == 0 or FH.backward_position_size == 0:
-                FH.catch = True
-                FH.S_dn = FH.S_
-                FH.S_dn_t = -FH.rt_soft
-                FH.S_up = FH.rt_soft
-                FH.S_up_t = 2*FH.rt_soft
-            else:
+        if FH.forward_position_size == 0 or FH.backward_position_size == 0:
+            FH.catch = True
+            FH.balance = False
+            FH.S_dn = FH.S_
+            FH.S_dn_t = -FH.rt_soft
+            FH.S_up = FH.rt_soft
+            FH.S_up_t = 2*FH.rt_soft
+        else:
+            if FH.balance and not FH.catch:
+                FH.t_up = min(FH.t_up,(1.0-FH.rt_soft)*FH.t+FH.rt_soft)
+                FH.t_up_S = min(FH.t_up_S,(1.0-2*FH.rt_soft)*FH.t+2*FH.rt_soft)
+                FH.t_dn = max(FH.t_dn,(1.0+FH.rt_soft)*FH.t-FH.rt_soft)
+                FH.t_dn_S = max(FH.t_dn_S,(1.0+2*FH.rt_soft)*FH.t-2*FH.rt_soft)
+                if FH.t >= FH.t_up_S:
+                    FH.balance = False
+                    FH.catch = True
+                    FH.S_up = FH.S_
+                    FH.S_up_t = (1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T
+                    FH.S_dn = (1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T
+                    FH.S_dn_t = (1.0+2*FH.rt_soft)*FH.S_-2*FH.rt_soft*FH._T
+                elif FH.t <= FH.t_dn_S:
+                    FH.balance = False
+                    FH.catch = True
+                    FH.S_dn = FH.S_
+                    FH.S_dn_t = (1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T
+                    FH.S_up = (1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T
+                    FH.S_up_t = (1.0-2*FH.rt_soft)*FH.S_+2*FH.rt_soft*FH._T
+                print ('balance',FH.t,FH.t_up_S,FH.t_up,FH.t_dn,FH.t_dn_S)
+            elif not FH.balance and FH.catch:
+                FH.S_up = min(FH.S_up,(1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T)
+                FH.S_up_t = min(FH.S_up_t,(1.0-2*FH.rt_soft)*FH.S_+2*FH.rt_soft*FH._T)
+                FH.S_dn = max(FH.S_dn,(1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T)
+                FH.S_dn_t = max(FH.S_dn_t,(1.0+2*FH.rt_soft)*FH.S_-2*FH.rt_soft*FH._T)
+                if FH.S_ >= FH.S_up_t:
+                    FH.catch = False
+                    FH.balance = True
+                    FH.t_up = FH.t
+                    FH.t_dn = (1.0+FH.rt_soft)*FH.t-FH.rt_soft
+                    FH.t_up_S = (1.0-FH.rt_soft)*FH.t+FH.rt_soft
+                    FH.t_dn_S = (1.0+2*FH.rt_soft)*FH.t-2*FH.rt_soft
+                elif FH.S_ <= FH.S_dn_t:
+                    FH.catch = False
+                    FH.balance = True
+                    FH.t_dn = FH.t
+                    FH.t_up = (1.0-FH.rt_soft)*FH.t+FH.rt_soft
+                    FH.t_dn_S = (1.0+FH.rt_soft)*FH.t-FH.rt_soft
+                    FH.t_up_S = (1.0-2*FH.rt_soft)*FH.t+2*FH.rt_soft
+                print ('catch',FH.S_,FH.S_up_t,FH.S_up,FH.S_dn,FH.S_dn_t)
+            elif not FH.balance and not FH.catch:
                 FH.balance = True
                 FH.t_up = (1.0-FH.rt_soft)*FH.t+FH.rt_soft
                 FH.t_dn = (1.0+FH.rt_soft)*FH.t-FH.rt_soft
@@ -163,11 +164,11 @@ class Handler_1T(FH):
             elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
                 if FH.forward_gap > FH.backward_gap:
                     if FH.backward_stable_price and FH._T < self.T_std:
-                        if FH.t <= FH.t_dn:
+                        if FH.t <= FH.t_dn and FH.backward_sprint:
                             self.backward_gap_balance = True
                 else:
                     if FH.forward_stable_price and FH._T < self.T_std:
-                        if FH.t <= FH.t_dn:
+                        if FH.t <= FH.t_dn and FH.forward_sprint:
                             self.forward_gap_balance = True
     #        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
     #            if FH.forward_position_size > 0:
@@ -235,12 +236,12 @@ class Handler_1T(FH):
             elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
                 if FH._T < self.T_std:
                     if FH.forward_gap > FH.backward_gap:
-                        if FH.backward_stable_price and FH.S_ <= FH.S_dn:
+                        if FH.backward_stable_price and FH.S_ <= FH.S_dn and FH.backward_sprint:
                             self.forward_catch = True
                             self.forward_catch_size = int(min(-FH.backward_position_size*self.T_std-FH.forward_position_size,FH.forward_limit-FH.forward_position_size))
                             print ('cccc',-FH.backward_position_size*self.T_std-FH.forward_position_size,FH.forward_limit-FH.forward_position_size)
                     else:
-                        if FH.forward_stable_price and FH.S_ <= FH.S_dn:
+                        if FH.forward_stable_price and FH.S_ <= FH.S_dn and FH.forward_sprint:
                             self.backward_catch = True
                             self.backward_catch_size = int(max(-FH.forward_position_size*self.T_std-FH.backward_position_size,-FH.backward_limit-FH.backward_position_size))
                             print ('bbbb',-FH.forward_position_size*self.T_std-FH.backward_position_size,-FH.backward_limit-FH.backward_position_size)
@@ -320,11 +321,11 @@ class Handler_1T(FH):
         if FH.forward_liq_flag:
             forward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle)
             if FH.forward_liq_price > 0:
-                forward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=2,price=str(round(FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage),FH.quanto)),expiration=2015360)))
+                forward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=2,price=str(round(FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage),FH.quanto)),expiration=2592000)))
                 FH.forward_trigger_liq = FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage)
         if FH.backward_liq_flag:
             backward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle)
             if FH.backward_liq_price > 0:
-                backward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=1,price=str(round(FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage),FH.quanto)),expiration=2015360)))
+                backward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=1,price=str(round(FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage),FH.quanto)),expiration=2592000)))
                 FH.backward_trigger_liq = FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage)
 
