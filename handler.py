@@ -14,14 +14,14 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = 0.0056224079049
+    balance_overflow = -0.0081493283023
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 1.004367237
+    goods = 2.51574100399
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
@@ -29,8 +29,8 @@ class FH(object):
     balance = False
     forward_sprint = False
     backward_sprint = True
-    forward_band_price = -1.0
-    backward_band_price = 9146.0
+    forward_band_price = 11146.5
+    backward_band_price = -1.0
     t = 0.0
     _T = None
     T_std = None
@@ -57,8 +57,8 @@ class FH(object):
         FH.limit_size = contract_params['limit_size']
         FH.quanto = contract_params['quanto']
         FH.balance_rt = contract_params['balance_rt']
-        FH.step_soft = contract_params['step_soft']
-        FH.step_hard = contract_params['step_hard']
+        FH.step_soft_std = contract_params['step_soft']
+        FH.step_hard_std = contract_params['step_hard']
         FH.surplus_abandon = contract_params['surplus_abandon']
         FH.surplus_endure = contract_params['surplus_endure']
         FH.std_mom = contract_params['std_mom']
@@ -73,6 +73,7 @@ class FH(object):
         backward_orders = backward_api_instance.list_futures_orders(contract=FH.contract,settle=FH.settle,status='open',async_req=True)
         candles=backward_api_instance.list_futures_candlesticks(contract=FH.contract,settle=FH.settle,interval='1m',async_req=True)
         candles_5m=backward_api_instance.list_futures_candlesticks(contract=FH.contract,settle=FH.settle,interval='5m',async_req=True)
+        candles_1h=backward_api_instance.list_futures_candlesticks(contract=FH.contract,settle=FH.settle,interval='1h',async_req=True)
         book = backward_api_instance.list_futures_order_book(contract=FH.contract,settle=FH.settle,async_req=True)
         forward_positions = forward_api_instance.get_position(contract=FH.contract,settle=FH.settle,async_req=True)
         backward_positions = backward_api_instance.get_position(contract=FH.contract,settle=FH.settle,async_req=True)
@@ -80,6 +81,7 @@ class FH(object):
         FH.backward_orders = backward_orders.get()
         candlesticks = candles.get()
         candlesticks_5m = candles_5m.get()
+        candlesticks_1h = candles_1h.get()
         FH.book = book.get()
         FH.forward_positions = forward_positions.get()
         FH.backward_positions = backward_positions.get()
@@ -123,19 +125,19 @@ class FH(object):
         if len(candlesticks) > 0:
             o = float(candlesticks[len(candlesticks)-1]._o)
             c = float(candlesticks[len(candlesticks)-1]._c)
-            if (c - o) > 10.0:
+            if (c - o)/c > 0.001:
 #                if (self.bid_1 - c)/self.bid_1 > -0.001:
                 FH.forward_stable_price = False
-            elif (c - o) < -10.0:
+            elif (c - o)/c < -0.001:
 #                if (self.ask_1 - c)/self.ask_1 < 0.001:
                 FH.backward_stable_price = False
 
         FH.forward_mom = False
         FH.backward_mom = False
         FH.co = 0.0
-        if len(candlesticks_5m) > 0:
-            o = float(candlesticks_5m[len(candlesticks_5m)-1]._o)
-            c = float(candlesticks_5m[len(candlesticks_5m)-1]._c)
+        if len(candlesticks_5m) > 1:
+            o = float(candlesticks_5m[len(candlesticks_5m)-2]._o)
+            c = float(candlesticks_5m[len(candlesticks_5m)-2]._c)
             FH.co = (c - o)
             if FH.co >= FH.std_mom:
                 FH.forward_mom = True
@@ -145,19 +147,26 @@ class FH(object):
             print(FH.backward_mom,FH.co,FH.backward_sprint)
             print(FH.forward_band_price,FH.backward_band_price)
 
-#        FH.step_soft = 10.0
-#        if len(candlesticks_5m) > 10:
-#            abs5m = []
-#            for i in range(1,11):
-#                o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
-#                c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
-#                abs5m.append(abs(c - o))
-#            abs5m = np.nan_to_num(abs5m)
-#            std_med = np.median(abs5m)
-#            std_smom = np.mean(filter(lambda x:x > std_med,abs5m))
-#            FH.step_soft = std_smom
-#         
-#        print (FH.step_soft)
+        FH.step_soft = FH.step_soft_std
+        if len(candlesticks_5m) > 10:
+            abs5m = []
+            for i in range(2,12):
+                o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
+                c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
+                abs5m.append(abs(c - o))
+            abs5m = np.nan_to_num(abs5m)
+            FH.step_soft = max(FH.step_soft,np.median(abs5m))
+
+        FH.step_hard = FH.step_hard_std
+        if len(candlesticks_1h) > 10:
+            abs1h = []
+            for i in range(2,12):
+                o = float(candlesticks_1h[len(candlesticks_1h)-i]._o)
+                c = float(candlesticks_1h[len(candlesticks_1h)-i]._c)
+                abs1h.append(abs(c - o))
+            abs1h = np.nan_to_num(abs1h)
+            FH.step_hard = max(FH.step_hard,np.max(abs1h))
+         
         FH.rt_soft = FH.step_soft/FH.entry_gap
         FH.rt_hard = FH.step_hard/FH.entry_gap
 

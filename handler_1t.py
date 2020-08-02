@@ -71,11 +71,11 @@ class Handler_1T(FH):
 
         if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
             FH.t = -FH.t_b/FH.t_f
-            self.T_std = 2.0 - FH.t
+            self.T_std = 1.6 - FH.t
             FH.t_head = min(FH.t_head,((1.0-FH.rt_hard)*FH.t+FH.rt_hard)/(1.0+FH.rt_hard*(1.0-FH.t)))
         elif FH.backward_gap < 0.0 and FH.forward_gap >= 0.0:
             FH.t = -FH.t_f/FH.t_b
-            self.T_std = 2.0 - FH.t
+            self.T_std = 1.6 - FH.t
             FH.t_head = min(FH.t_head,((1.0-FH.rt_hard)*FH.t+FH.rt_hard)/(1.0+FH.rt_hard*(1.0-FH.t)))
         elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
             if FH.forward_gap > FH.backward_gap:
