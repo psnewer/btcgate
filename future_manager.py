@@ -44,27 +44,29 @@ class Future_Manager(object):
         print (FH.goods,FH.balance_overflow,FH.forward_goods+FH.backward_goods+FH.balance_overflow,rt_abandon * FH.limit_goods)
         if FH.forward_goods + FH.backward_goods + FH.balance_overflow < rt_abandon * FH.limit_goods:
             if self.current_handler.tip == 't':
-                if FH.t <= FH.t_tail:
+                if FH.forward_goods + FH.backward_goods + FH.balance_overflow >= FH.t_tail:
                     self.current_handler = self.handler_1t
                     FH.t_head = 1.0
-                print (self.current_handler.tip,FH.t,FH.t_tail)
+                print (self.current_handler.tip,FH.forward_goods + FH.backward_goods + FH.balance_overflow,FH.t_tail)
             elif self.current_handler.tip == '1t':
                 if FH.t >= FH.t_head:
                     self.current_handler = self.handler_t
-                    FH.t_tail = -1.0
+                    FH.t_tail = 1000000.0
                 print (self.current_handler.tip,FH.t,FH.t_head)
-            elif self.current_handler.tip == 'w' or self.current_handler.tip == 'f':
-                if (FH.forward_sprint and FH.backward_gap >= 0.0) or (FH.backward_sprint and FH.forward_gap >= 0.0):
-                    self.current_handler = self.handler_t
-                else:
-                    if self.current_handler.tip == 'w':
-                        if (FH.forward_sprint and FH.forward_mom) or (FH.backward_sprint and FH.backward_mom):
-                            self.current_handler = self.handler_f
-                    elif self.current_handler.tip == 'f':
-                        if (FH.forward_sprint and FH.backward_mom) or (FH.backward_sprint and FH.forward_mom):
-                            self.current_handler = self.handler_w
-                    else:
-                        self.current_handler = self.handler_f
+#            elif self.current_handler.tip == 'w' or self.current_handler.tip == 'f':
+#                if (FH.forward_sprint and FH.backward_gap >= 0.0) or (FH.backward_sprint and FH.forward_gap >= 0.0):
+#                    self.current_handler = self.handler_t
+#                else:
+#                    if self.current_handler.tip == 'w':
+#                        if (FH.forward_sprint and FH.forward_mom) or (FH.backward_sprint and FH.backward_mom):
+#                            self.current_handler = self.handler_f
+#                    elif self.current_handler.tip == 'f':
+#                        if (FH.forward_sprint and FH.backward_mom) or (FH.backward_sprint and FH.forward_mom):
+#                            self.current_handler = self.handler_w
+            else:
+                FH.t_head = 1.0
+                FH.t_tail = 1000000.0
+                self.current_handler = self.handler_t
         else:
             if self.current_handler.tip == 'w':
                 if (FH.forward_sprint and FH.forward_mom) or (FH.backward_sprint and FH.backward_mom):
@@ -73,7 +75,7 @@ class Future_Manager(object):
                 if (FH.forward_sprint and FH.backward_mom) or (FH.backward_sprint and FH.forward_mom):
                     self.current_handler = self.handler_w
             else:
-                self.current_handler = self.handler_f
+                self.current_handler = self.handler_w
 
     def run(self):
         self.get_handler()

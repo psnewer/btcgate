@@ -72,17 +72,13 @@ class Handler_T(FH):
         if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
             FH.t = -FH.t_b/FH.t_f
             FH.T_std = 1.0 - 1.0*FH.t
-            if -min(FH.t_f,FH.t_b) <= FH.step_hard:
-                FH.t_tail = -1.0
-            else:
-                FH.t_tail = max(FH.t_tail,((1.0+FH.rt_hard)*FH.t-FH.rt_hard)/(1.0+FH.rt_hard*(FH.t-1.0)))
+            if FH._T  < FH.T_std:
+                FH.t_tail = min(FH.t_tail,FH.forward_value*(FH.ask_1+FH.step_hard)/FH.ask_1*(FH.ask_1-FH.forward_entry_price+FH.step_hard)/FH.forward_entry_price + FH.backward_value*(FH.bid_1+FH.step_hard)/FH.bid_1*(FH.backward_entry_price-FH.bid_1-FH.step_hard)/FH.backward_entry_price + FH.balance_overflow) 
         elif FH.backward_gap < 0.0 and FH.forward_gap >= 0.0:
             FH.t = -FH.t_f/FH.t_b
             FH.T_std = 1.0 - 1.0*FH.t
-            if -min(FH.t_f,FH.t_b) <= FH.step_hard:
-                FH.t_tail = -1.0
-            else:
-                FH.t_tail = max(FH.t_tail,((1.0+FH.rt_hard)*FH.t-FH.rt_hard)/(1.0+FH.rt_hard*(FH.t-1.0)))
+            if FH._T < FH.T_std:
+                FH.t_tail = min(FH.t_tail,FH.forward_value*(FH.ask_1-FH.step_hard)/FH.ask_1*(FH.ask_1-FH.forward_entry_price-FH.step_hard)/FH.forward_entry_price + FH.backward_value*(FH.bid_1-FH.step_hard)/FH.bid_1*(FH.backward_entry_price-FH.bid_1+FH.step_hard)/FH.backward_entry_price + FH.balance_overflow)
         elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
             if FH.forward_gap > FH.backward_gap:
                 FH.t = -FH.t_f/(FH.t_b+FH.t_f)
@@ -91,6 +87,11 @@ class Handler_T(FH):
             FH.T_std = 1.0
 #        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
 #            FH.T_std = 0.61
+
+        if (FH.forward_position_size == 0 and FH.backward_position_size < 0) or (FH.forward_position_size != 0 and FH.backward_position_size > 0):
+            self.tif = 'ioc'
+        else:
+            self.tif = 'poc'
 
         if FH.forward_position_size == 0 or FH.backward_position_size == 0:
             FH.catch = True
@@ -285,7 +286,10 @@ class Handler_T(FH):
         if not self.forward_increase_clear:
             if FH.forward_position_size < FH.forward_limit:
                 if self.forward_catch and self.forward_catch_size > 0:
-                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.bid_1,tif='poc'))
+                    if self.tif == 'ioc':
+                        forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.ask_1*1.0001,tif='ioc'))
+                    else:
+                        forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.bid_1,tif='poc'))
         if not self.forward_reduce_clear and self.forward_gap_balance:
             if FH.forward_position_size > 0:
                 if self.forward_balance_size < 0:
@@ -317,7 +321,10 @@ class Handler_T(FH):
         if not self.backward_increase_clear:
             if abs(FH.backward_position_size) < FH.backward_limit:
                 if self.backward_catch and self.backward_catch_size < 0:
-                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.ask_1,tif='poc'))
+                    if self.tif == 'ioc':
+                        backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.bid_1*0.9999,tif='ioc'))
+                    else:
+                        backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.ask_1,tif='poc'))
         if not self.backward_reduce_clear and self.backward_gap_balance:
             if FH.backward_position_size < 0:
                 if self.backward_balance_size > 0:

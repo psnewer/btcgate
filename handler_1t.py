@@ -83,10 +83,14 @@ class Handler_1T(FH):
             else:
                 FH.t = -FH.t_b/(FH.t_f+FH.t_b)
             self.T_std = 1.6
-#            FH.t_head = min(FH.t_head,FH.t+0.8)
 #        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
 #            self.T_std = 0.61
-        
+       
+        if (FH.forward_position_size == 0 and FH.backward_position_size < 0) or (FH.forward_position_size > 0 and FH.backward_position_size == 0):
+            self.tif = 'ioc'
+        else:
+            self.tif = 'poc'
+
         if FH.forward_position_size == 0 or FH.backward_position_size == 0:
             FH.catch = True
             FH.balance = False
@@ -280,7 +284,10 @@ class Handler_1T(FH):
         if not self.forward_increase_clear:
             if FH.forward_position_size < FH.forward_limit:
                 if self.forward_catch and self.forward_catch_size > 0:
-                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.bid_1,tif='poc'))
+                    if self.tif == 'ioc':
+                        forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.ask_1*1.0001,tif='ioc'))
+                    else:
+                        forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.bid_1,tif='poc'))
         if not self.forward_reduce_clear and self.forward_gap_balance:
             if FH.forward_position_size > 0:
                 if self.forward_balance_size < 0:
@@ -312,7 +319,10 @@ class Handler_1T(FH):
         if not self.backward_increase_clear:
             if abs(FH.backward_position_size) < FH.backward_limit:
                 if self.backward_catch and self.backward_catch_size < 0:
-                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.ask_1,tif='poc'))
+                    if self.tif == 'ioc':
+                        backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.bid_1*0.9999,tif='ioc'))
+                    else:
+                        backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.ask_1,tif='poc'))
         if not self.backward_reduce_clear and self.backward_gap_balance:
             if FH.backward_position_size < 0:
                 if self.backward_balance_size > 0:

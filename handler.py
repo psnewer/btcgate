@@ -14,22 +14,22 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = -0.0081493283023
+    balance_overflow = 2.98271671556
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 2.51574100399
+    goods = 9.48761358236
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
     catch = False
     balance = False
-    forward_sprint = False
-    backward_sprint = True
-    forward_band_price = 11146.5
+    forward_sprint = True
+    backward_sprint = False
+    forward_band_price = 11457.6
     backward_band_price = -1.0
     t = 0.0
     _T = None
@@ -46,8 +46,8 @@ class FH(object):
     t_dn_S = 0.0
     rt_soft = 0.0
     rt_hard = 0.0
-    t_head = 1.0
-    t_tail = -1.0
+    t_head = 1.0 
+    t_tail = 1000000.0
 
     def __init__(self,contract = '',contract_params = {}):
 	FH.contract = contract
@@ -61,8 +61,8 @@ class FH(object):
         FH.step_hard_std = contract_params['step_hard']
         FH.surplus_abandon = contract_params['surplus_abandon']
         FH.surplus_endure = contract_params['surplus_endure']
-        FH.std_mom = contract_params['std_mom']
-        FH.std_sprint = contract_params['std_sprint']
+        FH.std_mom_std = contract_params['std_mom']
+        FH.std_sprint_std = contract_params['std_sprint']
         FH.std_fin = contract_params['std_fin']
         FH.std_fout = contract_params['std_fout']
         FH.peak = contract_params['peak']
@@ -96,6 +96,8 @@ class FH(object):
         FH.mark_price = float(FH.forward_positions._mark_price)
         FH.ask_1 = float(FH.book._asks[0]._p)
         FH.bid_1 = float(FH.book._bids[0]._p)
+        FH.forward_value = float(FH.forward_positions._value)*FH.ask_1/FH.mark_price
+        FH.backward_value = float(FH.backward_positions._value)*FH.bid_1/FH.mark_price
 
         FH.forward_limit = FH.limit_size
         FH.backward_limit = FH.limit_size
@@ -120,17 +122,38 @@ class FH(object):
             FH.t_b = 0.0
             FH.backward_gap = 0.0
 
-        FH.forward_stable_price = True
-        FH.backward_stable_price = True
+        FH.forward_stable_price = False
+        FH.backward_stable_price = False
         if len(candlesticks) > 0:
             o = float(candlesticks[len(candlesticks)-1]._o)
             c = float(candlesticks[len(candlesticks)-1]._c)
-            if (c - o)/c > 0.001:
-#                if (self.bid_1 - c)/self.bid_1 > -0.001:
-                FH.forward_stable_price = False
-            elif (c - o)/c < -0.001:
-#                if (self.ask_1 - c)/self.ask_1 < 0.001:
-                FH.backward_stable_price = False
+            if (c - o)/c < 0.001:
+                FH.forward_stable_price = True
+            elif (c - o)/c > -0.001:
+                FH.backward_stable_price = True
+
+        if len(candlesticks_5m) > 10:
+            abs5m = []
+            for i in range(2,12):
+                o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
+                c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
+                abs5m.append(abs(c - o))
+            abs5m = np.nan_to_num(abs5m)
+            med_5m = np.median(abs5m)
+            FH.step_soft = max(FH.step_soft_std,med_5m)
+            FH.std_mom = max(FH.std_mom_std,med_5m)
+
+        if len(candlesticks_1h) > 10:
+            abs1h = []
+            for i in range(1,11):
+                o = float(candlesticks_1h[len(candlesticks_1h)-i]._o)
+                c = float(candlesticks_1h[len(candlesticks_1h)-i]._c)
+                abs1h.append(abs(c - o))
+            abs1h = np.nan_to_num(abs1h)
+            max_1h = np.max(abs1h)
+            med_1h = np.median(abs1h)
+            FH.std_sprint = max(FH.std_sprint_std,med_1h)
+            FH.step_hard = max(FH.step_hard_std,max_1h)
 
         FH.forward_mom = False
         FH.backward_mom = False
@@ -143,30 +166,8 @@ class FH(object):
                 FH.forward_mom = True
             elif FH.co <= -FH.std_mom:
                 FH.backward_mom = True
-            print(FH.forward_mom,FH.co,FH.forward_sprint)
-            print(FH.backward_mom,FH.co,FH.backward_sprint)
-            print(FH.forward_band_price,FH.backward_band_price)
 
-        FH.step_soft = FH.step_soft_std
-        if len(candlesticks_5m) > 10:
-            abs5m = []
-            for i in range(2,12):
-                o = float(candlesticks_5m[len(candlesticks_5m)-i]._o)
-                c = float(candlesticks_5m[len(candlesticks_5m)-i]._c)
-                abs5m.append(abs(c - o))
-            abs5m = np.nan_to_num(abs5m)
-            FH.step_soft = max(FH.step_soft,np.median(abs5m))
-
-        FH.step_hard = FH.step_hard_std
-        if len(candlesticks_1h) > 10:
-            abs1h = []
-            for i in range(2,12):
-                o = float(candlesticks_1h[len(candlesticks_1h)-i]._o)
-                c = float(candlesticks_1h[len(candlesticks_1h)-i]._c)
-                abs1h.append(abs(c - o))
-            abs1h = np.nan_to_num(abs1h)
-            FH.step_hard = max(FH.step_hard,np.max(abs1h))
-         
+        print ('step',FH.step_soft,FH.step_hard)
         FH.rt_soft = FH.step_soft/FH.entry_gap
         FH.rt_hard = FH.step_hard/FH.entry_gap
 
@@ -185,18 +186,22 @@ class FH(object):
                 FH.forward_sprint = True
             FH.forward_band_price = -1.0
 
+        print(FH.forward_mom,FH.co,FH.forward_sprint)
+        print(FH.backward_mom,FH.co,FH.backward_sprint)
+        print(FH.std_mom,FH.std_sprint,FH.forward_band_price,FH.backward_band_price)
+
         if FH.forward_entry_price == 0:
             FH.forward_goods = 0.0
         else:
-            FH.forward_goods = float(FH.forward_positions._value)*(FH.ask_1-FH.forward_entry_price)/FH.forward_entry_price
+            FH.forward_goods = FH.forward_value*(FH.ask_1-FH.forward_entry_price)/FH.forward_entry_price
         if FH.backward_entry_price == 0:
             FH.backward_goods = 0.0
         else:
-            FH.backward_goods = float(FH.backward_positions._value)*(FH.backward_entry_price-FH.bid_1)/FH.backward_entry_price
+            FH.backward_goods = FH.backward_value*(FH.backward_entry_price-FH.bid_1)/FH.backward_entry_price
         if FH.forward_position_size > 0:
-            FH.limit_goods = float(FH.forward_positions._value)*FH.limit_size/FH.forward_position_size
+            FH.limit_goods = FH.forward_value*FH.limit_size/FH.forward_position_size
         elif FH.backward_position_size < 0:
-            FH.limit_goods = float(FH.backward_positions._value)*FH.limit_size/abs(FH.backward_position_size)
+            FH.limit_goods = FH.backward_value*FH.limit_size/abs(FH.backward_position_size)
         else:
             FH.limit_goods = 0.0
 

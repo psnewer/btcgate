@@ -60,6 +60,9 @@ class Handler_W(FH):
         if len(backward_account_book) > 0:
             FH.backward_account_from = int(backward_account_book[0]._time) + 1
 
+        if FH.forward_goods + FH.backward_goods >= 0.0:
+            FH.balance_overflow = 0.0
+
         self.forward_reap = False
         self.backward_reap = False
         self.forward_sow = False

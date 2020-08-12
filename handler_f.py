@@ -50,20 +50,23 @@ class Handler_F(FH):
         if len(backward_account_book) > 0:
             FH.backward_account_from = int(backward_account_book[0]._time) + 1
 
+        if FH.forward_goods + FH.backward_goods >= 0.0:
+            FH.balance_overflow = 0.0
+
         self.forward_reap = False
         self.backward_reap = False
         self.forward_sow = False
         self.backward_sow = False
-        if FH.co < -FH.std_fin:
+        if FH.backward_mom:
             if FH.backward_sprint:
                 self.forward_sow = True
-        elif FH.co > FH.std_fin:
+        elif FH.forward_mom:
             if FH.forward_sprint:
                 self.backward_sow = True
 
-        if FH.forward_gap >= FH.std_fout:
+        if FH.forward_gap >= FH.std_mom/FH.forward_entry_price:
             self.forward_reap = True
-        elif FH.backward_gap >= FH.std_fout:
+        elif FH.backward_gap >= FH.std_mom/FH.backward_entry_price:
             self.backward_reap = True
 
         self.forward_gap_balance = False
