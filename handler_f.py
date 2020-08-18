@@ -64,9 +64,14 @@ class Handler_F(FH):
             if FH.forward_sprint:
                 self.backward_sow = True
 
-        if FH.forward_gap >= FH.std_mom/FH.forward_entry_price:
+#        if FH.forward_gap >= FH.std_mom/FH.forward_entry_price:
+#            self.forward_reap = True
+#        elif FH.backward_gap >= FH.std_mom/FH.backward_entry_price:
+#            self.backward_reap = True
+
+        if FH.forward_gap >= 0.0:
             self.forward_reap = True
-        elif FH.backward_gap >= FH.std_mom/FH.backward_entry_price:
+        elif FH.backward_gap >= 0.0:
             self.backward_reap = True
 
         self.forward_gap_balance = False

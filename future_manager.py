@@ -40,9 +40,10 @@ class Future_Manager(object):
 
     def get_handler(self):
         rt_abandon = FH.surplus_abandon/((FH.ask_1+FH.bid_1)/2.0)
+        rt_endure = FH.surplus_endure/((FH.ask_1+FH.bid_1)/2.0)
         print ('aaaa',time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),self.current_handler.tip)
-        print (FH.goods,FH.balance_overflow,FH.forward_goods+FH.backward_goods+FH.balance_overflow,rt_abandon * FH.limit_goods)
-        if FH.forward_goods + FH.backward_goods + FH.balance_overflow < rt_abandon * FH.limit_goods:
+        print (FH.goods,FH.balance_overflow,FH.forward_goods+FH.backward_goods+FH.balance_overflow,rt_abandon * FH.limit_goods,rt_endure * FH.limit_goods)
+        if FH.forward_goods + FH.backward_goods + FH.balance_overflow < rt_endure * FH.limit_goods:
             if self.current_handler.tip == 't':
                 if FH.forward_goods + FH.backward_goods + FH.balance_overflow >= FH.t_tail:
                     self.current_handler = self.handler_1t
@@ -68,6 +69,8 @@ class Future_Manager(object):
                 FH.t_tail = 1000000.0
                 self.current_handler = self.handler_t
         else:
+            FH.catch = False
+            FH.balance = False
             if self.current_handler.tip == 'w':
                 if (FH.forward_sprint and FH.forward_mom) or (FH.backward_sprint and FH.backward_mom):
                     self.current_handler = self.handler_f

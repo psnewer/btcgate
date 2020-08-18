@@ -14,14 +14,14 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = 2.98271671556
+    balance_overflow = 0.0 
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 9.48761358236
+    goods = 0.0
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
@@ -29,7 +29,7 @@ class FH(object):
     balance = False
     forward_sprint = True
     backward_sprint = False
-    forward_band_price = 11457.6
+    forward_band_price = -1.0
     backward_band_price = -1.0
     t = 0.0
     _T = None
@@ -129,7 +129,7 @@ class FH(object):
             c = float(candlesticks[len(candlesticks)-1]._c)
             if (c - o)/c < 0.001:
                 FH.forward_stable_price = True
-            elif (c - o)/c > -0.001:
+            if (c - o)/c > -0.001:
                 FH.backward_stable_price = True
 
         if len(candlesticks_5m) > 10:

@@ -24,11 +24,11 @@ class Handler_W(FH):
         self.backward_close = 0
         if FH.forward_gap > 0.0015:
             self.forward_close = 2
-        elif FH.forward_gap > 0.0005:
+        elif FH.forward_gap > 0.0:
             self.forward_close = 1
         if FH.backward_gap > 0.0015:
             self.backward_close = 2
-        elif FH.backward_gap > 0.0005:
+        elif FH.backward_gap > 0.0:
             self.backward_close = 1
 
         if FH.forward_account_from == 0:

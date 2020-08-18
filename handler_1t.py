@@ -87,7 +87,7 @@ class Handler_1T(FH):
 #            self.T_std = 0.61
        
         if (FH.forward_position_size == 0 and FH.backward_position_size < 0) or (FH.forward_position_size > 0 and FH.backward_position_size == 0):
-            self.tif = 'ioc'
+            self.tif = 'poc'
         else:
             self.tif = 'poc'
 
@@ -100,10 +100,10 @@ class Handler_1T(FH):
             FH.S_up_t = 2*FH.rt_soft
         else:
             if FH.balance and not FH.catch:
-                FH.t_up = min(FH.t_up,(1.0-FH.rt_soft)*FH.t+FH.rt_soft)
-                FH.t_up_S = min(FH.t_up_S,(1.0-2*FH.rt_soft)*FH.t+2*FH.rt_soft)
-                FH.t_dn = max(FH.t_dn,(1.0+FH.rt_soft)*FH.t-FH.rt_soft)
-                FH.t_dn_S = max(FH.t_dn_S,(1.0+2*FH.rt_soft)*FH.t-2*FH.rt_soft)
+#                FH.t_up = min(FH.t_up,(1.0-FH.rt_soft)*FH.t+FH.rt_soft)
+#                FH.t_up_S = min(FH.t_up_S,(1.0-2*FH.rt_soft)*FH.t+2*FH.rt_soft)
+#                FH.t_dn = max(FH.t_dn,(1.0+FH.rt_soft)*FH.t-FH.rt_soft)
+#                FH.t_dn_S = max(FH.t_dn_S,(1.0+2*FH.rt_soft)*FH.t-2*FH.rt_soft)
                 if FH.t >= FH.t_up_S:
                     FH.balance = False
                     FH.catch = True
@@ -120,10 +120,10 @@ class Handler_1T(FH):
                     FH.S_up_t = (1.0-2*FH.rt_soft)*FH.S_+2*FH.rt_soft*FH._T
                 print ('balance',FH.t,FH.t_up_S,FH.t_up,FH.t_dn,FH.t_dn_S)
             elif not FH.balance and FH.catch:
-                FH.S_up = min(FH.S_up,(1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T)
-                FH.S_up_t = min(FH.S_up_t,(1.0-2*FH.rt_soft)*FH.S_+2*FH.rt_soft*FH._T)
-                FH.S_dn = max(FH.S_dn,(1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T)
-                FH.S_dn_t = max(FH.S_dn_t,(1.0+2*FH.rt_soft)*FH.S_-2*FH.rt_soft*FH._T)
+#                FH.S_up = min(FH.S_up,(1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T)
+#                FH.S_up_t = min(FH.S_up_t,(1.0-2*FH.rt_soft)*FH.S_+2*FH.rt_soft*FH._T)
+#                FH.S_dn = max(FH.S_dn,(1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T)
+#                FH.S_dn_t = max(FH.S_dn_t,(1.0+2*FH.rt_soft)*FH.S_-2*FH.rt_soft*FH._T)
                 if FH.S_ >= FH.S_up_t:
                     FH.catch = False
                     FH.balance = True
@@ -213,7 +213,7 @@ class Handler_1T(FH):
         self.forward_catch_size = 0
         self.backward_catch = False
         self.backward_catch_size = 0
-        print (FH._T,self.T_std)
+        print (FH._T,self.T_std,FH.forward_stable_price,FH.backward_stable_price)
         if FH.catch:
             if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
                 if FH._T > self.T_std:
