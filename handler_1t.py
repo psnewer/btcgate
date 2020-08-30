@@ -168,11 +168,11 @@ class Handler_1T(FH):
             elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
                 if FH.forward_gap > FH.backward_gap:
                     if FH.backward_stable_price and FH._T < self.T_std:
-                        if FH.t <= FH.t_dn and FH.backward_sprint:
+                        if FH.t <= FH.t_dn:
                             self.backward_gap_balance = True
                 else:
                     if FH.forward_stable_price and FH._T < self.T_std:
-                        if FH.t <= FH.t_dn and FH.forward_sprint:
+                        if FH.t <= FH.t_dn:
                             self.forward_gap_balance = True
     #        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
     #            if FH.forward_position_size > 0:
@@ -222,7 +222,7 @@ class Handler_1T(FH):
                         self.forward_catch_size = int(min(-FH.backward_position_size/self.T_std-FH.forward_position_size,FH.forward_limit-FH.forward_position_size))
                         print ('1111',-FH.backward_position_size/self.T_std-FH.forward_position_size,FH.forward_limit-FH.forward_position_size)
                 elif FH._T < self.T_std:
-                    if not FH.backward_stable_price and FH.S_ <= FH.S_dn:
+                    if FH.forward_stable_price and FH.S_ <= FH.S_dn:
                         self.backward_catch = True
                         self.backward_catch_size = int(max(-FH.forward_position_size*self.T_std-FH.backward_position_size,-FH.backward_limit-FH.backward_position_size))
                         print ('bbbb',-FH.forward_position_size*self.T_std-FH.backward_position_size,-FH.backward_limit-FH.backward_position_size)
@@ -233,19 +233,19 @@ class Handler_1T(FH):
                         self.backward_catch_size = int(max(-FH.forward_position_size/self.T_std-FH.backward_position_size,-FH.backward_limit-FH.backward_position_size))
                         print ('2222',-FH.forward_position_size/self.T_std-FH.backward_position_size,-FH.backward_limit-FH.backward_position_size)
                 elif FH._T < self.T_std:
-                    if not FH.forward_stable_price and FH.S_ <= FH.S_dn:
+                    if FH.backward_stable_price and FH.S_ <= FH.S_dn:
                         self.forward_catch = True
                         self.forward_catch_size = int(min(-FH.backward_position_size*self.T_std-FH.forward_position_size,FH.forward_limit-FH.forward_position_size))
                         print ('cccc',-FH.backward_position_size*self.T_std-FH.forward_position_size,FH.forward_limit-FH.forward_position_size)
             elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
                 if FH._T < self.T_std:
                     if FH.forward_gap > FH.backward_gap:
-                        if FH.backward_stable_price and FH.S_ <= FH.S_dn and FH.backward_sprint:
+                        if FH.backward_stable_price and FH.S_ <= FH.S_dn:
                             self.forward_catch = True
                             self.forward_catch_size = int(min(-FH.backward_position_size*self.T_std-FH.forward_position_size,FH.forward_limit-FH.forward_position_size))
                             print ('cccc',-FH.backward_position_size*self.T_std-FH.forward_position_size,FH.forward_limit-FH.forward_position_size)
                     else:
-                        if FH.forward_stable_price and FH.S_ <= FH.S_dn and FH.forward_sprint:
+                        if FH.forward_stable_price and FH.S_ <= FH.S_dn:
                             self.backward_catch = True
                             self.backward_catch_size = int(max(-FH.forward_position_size*self.T_std-FH.backward_position_size,-FH.backward_limit-FH.backward_position_size))
                             print ('bbbb',-FH.forward_position_size*self.T_std-FH.backward_position_size,-FH.backward_limit-FH.backward_position_size)

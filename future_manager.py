@@ -45,12 +45,14 @@ class Future_Manager(object):
         print (FH.goods,FH.balance_overflow,FH.forward_goods+FH.backward_goods+FH.balance_overflow,rt_abandon * FH.limit_goods,rt_endure * FH.limit_goods)
         if FH.forward_goods + FH.backward_goods + FH.balance_overflow < rt_endure * FH.limit_goods:
             if self.current_handler.tip == 't':
-                if FH.forward_goods + FH.backward_goods + FH.balance_overflow >= FH.t_tail:
+#                if FH.forward_goods + FH.backward_goods + FH.balance_overflow >= FH.t_tail:
+                if FH.t < 0.0:
                     self.current_handler = self.handler_1t
                     FH.t_head = 1.0
                 print (self.current_handler.tip,FH.forward_goods + FH.backward_goods + FH.balance_overflow,FH.t_tail)
             elif self.current_handler.tip == '1t':
-                if FH.t >= FH.t_head:
+#                if FH.t >= FH.t_head:
+                if FH.t > 0.5:
                     self.current_handler = self.handler_t
                     FH.t_tail = 1000000.0
                 print (self.current_handler.tip,FH.t,FH.t_head)
