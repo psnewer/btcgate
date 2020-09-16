@@ -91,6 +91,61 @@ class Handler_1T(FH):
         else:
             self.tif = 'poc'
 
+#        if FH.forward_position_size == 0 or FH.backward_position_size == 0:
+#            FH.catch = True
+#            FH.balance = False
+#            FH.S_dn = FH.S_
+#            FH.S_dn_t = -FH.rt_soft_max/(1.0-FH.rt_soft_max*(1.0-FH.t)) if FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+#            FH.S_up = FH.rt_soft_med/(1.0+FH.rt_soft_med*(1.0-FH.t))
+#            FH.S_up_t = 2*FH.rt_soft_med/(1.0+2*FH.rt_soft_med*(1.0-FH.t))
+#        else:
+#            if FH.balance and not FH.catch:
+##                FH.t_up = min(FH.t_up,(1.0-FH.rt_soft)*FH.t+FH.rt_soft)
+##                FH.t_up_S = min(FH.t_up_S,(1.0-2*FH.rt_soft)*FH.t+2*FH.rt_soft)
+##                FH.t_dn = max(FH.t_dn,(1.0+FH.rt_soft)*FH.t-FH.rt_soft)
+##                FH.t_dn_S = max(FH.t_dn_S,(1.0+2*FH.rt_soft)*FH.t-2*FH.rt_soft)
+#                if FH.t >= FH.t_up_S:
+#                    FH.balance = False
+#                    FH.catch = True
+#                    FH.S_up = FH.S_
+#                    FH.S_up_t = ((1.0-FH.rt_soft_med)*FH.S_+FH.rt_soft_med*FH._T)/(1.0+FH.rt_soft_med*(1.0-FH.t))
+#                    FH.S_dn = ((1.0+FH.rt_soft_max)*FH.S_-FH.rt_soft_max*FH._T)/(1.0-FH.rt_soft_max*(1.0-FH.t)) if FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+#                    FH.S_dn_t = ((1.0+2*FH.rt_soft_max)*FH.S_-2*FH.rt_soft_max*FH._T)/(1.0-2*FH.rt_soft_max*(1.0-FH.t)) if 2*FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+#                elif FH.t <= FH.t_dn_S:
+#                    FH.balance = False
+#                    FH.catch = True
+#                    FH.S_dn = FH.S_
+#                    FH.S_dn_t = ((1.0+FH.rt_soft_max)*FH.S_-FH.rt_soft_max*FH._T)/(1.0-FH.rt_soft_max*(1.0-FH.t)) if FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+#                    FH.S_up = ((1.0-FH.rt_soft_med)*FH.S_+FH.rt_soft_med*FH._T)/(1.0+FH.rt_soft_med*(1.0-FH.t))
+#                    FH.S_up_t = ((1.0-2*FH.rt_soft_med)*FH.S_+2*FH.rt_soft_med*FH._T)/(1.0+2*FH.rt_soft_med*(1.0-FH.t))
+#                print ('balance',FH.t,FH.t_up_S,FH.t_up,FH.t_dn,FH.t_dn_S)
+#            elif not FH.balance and FH.catch:
+##                FH.S_up = min(FH.S_up,(1.0-FH.rt_soft)*FH.S_+FH.rt_soft*FH._T)
+##                FH.S_up_t = min(FH.S_up_t,(1.0-2*FH.rt_soft)*FH.S_+2*FH.rt_soft*FH._T)
+##                FH.S_dn = max(FH.S_dn,(1.0+FH.rt_soft)*FH.S_-FH.rt_soft*FH._T)
+##                FH.S_dn_t = max(FH.S_dn_t,(1.0+2*FH.rt_soft)*FH.S_-2*FH.rt_soft*FH._T)
+#                if FH.S_ >= FH.S_up_t:
+#                    FH.catch = False
+#                    FH.balance = True
+#                    FH.t_up = FH.t
+#                    FH.t_dn = ((1.0+FH.rt_soft_max)*FH.t-FH.rt_soft_max)/(1.0-FH.rt_soft_max*(1.0-FH.t)) if FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+#                    FH.t_up_S = ((1.0-FH.rt_soft_med)*FH.t+FH.rt_soft_med)/(1.0+FH.rt_soft_med*(1.0-FH.t))
+#                    FH.t_dn_S = ((1.0+2*FH.rt_soft_max)*FH.t-2*FH.rt_soft_max)/(1.0-2*FH.rt_soft_max*(1.0-FH.t)) if 2*FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+#                elif FH.S_ <= FH.S_dn_t:
+#                    FH.catch = False
+#                    FH.balance = True
+#                    FH.t_dn = FH.t
+#                    FH.t_up = ((1.0-FH.rt_soft_med)*FH.t+FH.rt_soft_med)/(1.0+FH.rt_soft_med*(1.0-FH.t))
+#                    FH.t_dn_S = ((1.0+FH.rt_soft_max)*FH.t-FH.rt_soft_max)/(1.0-FH.rt_soft_max*(1.0-FH.t)) if FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+#                    FH.t_up_S = ((1.0-2*FH.rt_soft_med)*FH.t+2*FH.rt_soft_med)/(1.0+2*FH.rt_soft_med*(1.0-FH.t))
+#                print ('catch',FH.S_,FH.S_up_t,FH.S_up,FH.S_dn,FH.S_dn_t)
+#            elif not FH.balance and not FH.catch:
+#                FH.balance = True
+#                FH.t_up = ((1.0-FH.rt_soft_med)*FH.t+FH.rt_soft_med)/(1.0+FH.rt_soft_med*(1.0-FH.t))
+#                FH.t_dn = ((1.0+FH.rt_soft_max)*FH.t-FH.rt_soft_max)/(1.0-FH.rt_soft_max*(1.0-FH.t)) if FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+#                FH.t_up_S = ((1.0-2*FH.rt_soft_med)*FH.t+2*FH.rt_soft_med)/(1.0+2*FH.rt_soft_med*(1.0-FH.t))
+#                FH.t_dn_S = ((1.0+2*FH.rt_soft_max)*FH.t-2*FH.rt_soft_max)/(1.0-2*FH.rt_soft_max*(1.0-FH.t)) if 2*FH.step_soft_max < -min(FH.t_f,FH.t_b) else -1.0
+
         if FH.forward_position_size == 0 or FH.backward_position_size == 0:
             FH.catch = True
             FH.balance = False

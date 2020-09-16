@@ -14,14 +14,14 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = 0.0
+    balance_overflow = 0.013928324371
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
     balance_rt = 1.0
-    goods = 0.0
+    goods = 0.60511174842
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
@@ -29,8 +29,8 @@ class FH(object):
     balance = False
     forward_sprint = True
     backward_sprint = False
-    forward_band_price = -1.0
-    backward_band_price = 10272.0
+    forward_band_price = 10750.9
+    backward_band_price = -1.0
     t = 0.0
     _T = None
     T_std = None
@@ -140,7 +140,8 @@ class FH(object):
                 abs5m.append(abs(c - o))
             abs5m = np.nan_to_num(abs5m)
             med_5m = np.median(abs5m)
-            FH.step_soft = max(FH.step_soft_std,med_5m)
+            max_5m = np.max(abs5m)
+            FH.step_soft = max(FH.step_soft_std,max_5m)
             FH.std_mom = max(FH.std_mom_std,med_5m)
 
         if len(candlesticks_1h) > 10:

@@ -82,7 +82,12 @@ class Future_Manager(object):
                 if (FH.forward_sprint and FH.backward_mom) or (FH.backward_sprint and FH.forward_mom):
                     self.current_handler = self.handler_w
             else:
-                self.current_handler = self.handler_w
+                if FH._T > 1.0:
+                    self.current_handler = self.handler_w
+                elif FH._T < 1.0:
+                    self.current_handler = self.handler_f
+                else:
+                    self.current_handler = self.handler_f
 
     def run(self):
         self.get_handler()
