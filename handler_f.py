@@ -17,6 +17,8 @@ from handler import *
 class Handler_F(FH):
     def __init__(self):
         self.tip = 'f'
+        self.forward_target_size = 0
+        self.backward_target_size = 0
 
     def get_flag(self):
         self.get_std_flag()
@@ -32,7 +34,7 @@ class Handler_F(FH):
                 FH.goods += float(item.change)
                 if item.type == 'pnl':
                     rt_abandon = FH.surplus_abandon/((FH.ask_1+FH.bid_1)/2.0)
-                    if float(item.change) > 0.0 and FH.forward_goods + FH.backward_goods + FH.balance_overflow >= rt_abandon * FH.limit_goods:
+                    if float(item.change) > 0.0 and FH.forward_goods + FH.backward_goods + FH.balance_overflow >= FH.abandon_goods:
                         FH.balance_overflow += float(item.change) * FH.balance_rt
                     else:
                         FH.balance_overflow += float(item.change)
@@ -41,7 +43,7 @@ class Handler_F(FH):
                 FH.goods += float(item.change)
                 if item.type == 'pnl':
                     rt_abandon = FH.surplus_abandon/((FH.ask_1+FH.bid_1)/2.0)
-                    if float(item.change) > 0.0 and FH.forward_goods + FH.backward_goods + FH.balance_overflow >= rt_abandon * FH.limit_goods:
+                    if float(item.change) > 0.0 and FH.forward_goods + FH.backward_goods + FH.balance_overflow >= FH.abandon_goods:
                         FH.balance_overflow += float(item.change) * FH.balance_rt
                     else:
                         FH.balance_overflow += float(item.change)
@@ -50,47 +52,75 @@ class Handler_F(FH):
         if len(backward_account_book) > 0:
             FH.backward_account_from = int(backward_account_book[0]._time) + 1
 
-        if FH.forward_goods + FH.backward_goods >= 0.0:
-            FH.balance_overflow = 0.0
+#        self.forward_reap = False
+#        self.backward_reap = False
+#        self.forward_sow = False
+#        self.backward_sow = False
+#        if FH.backward_mom:
+#            if FH.backward_sprint:
+#                self.forward_sow = True
+#        elif FH.forward_mom:
+#            if FH.forward_sprint:
+#                self.backward_sow = True
+#
+##        if FH.forward_gap >= FH.std_mom/FH.forward_entry_price:
+##            self.forward_reap = True
+##        elif FH.backward_gap >= FH.std_mom/FH.backward_entry_price:
+##            self.backward_reap = True
+#
+#        if FH.forward_gap >= 0.0:
+#            self.forward_reap = True
+#        elif FH.backward_gap >= 0.0:
+#            self.backward_reap = True
+#
+#        self.forward_gap_balance = False
+#        self.backward_gap_balance = False
+#        if self.forward_reap and FH.forward_stable_price:
+#            self.forward_gap_balance = True
+#            self.forward_balance_size = - FH.forward_position_size
+#        elif self.backward_reap and FH.backward_stable_price:
+#            self.backward_gap_balance = True
+#            self.backward_balance_size = - FH.backward_position_size
+#
+#        self.forward_catch = False
+#        self.backward_catch = False
+#        if self.forward_sow and FH.backward_stable_price:
+#            self.forward_catch = True
+#            self.forward_catch_size = FH.limit_size - FH.forward_position_size
+#        elif self.backward_sow and FH.forward_stable_price:
+#            self.backward_catch = True
+#            self.backward_catch_size = -FH.limit_size - FH.backward_position_size
 
-        self.forward_reap = False
-        self.backward_reap = False
         self.forward_sow = False
         self.backward_sow = False
-        if FH.backward_mom:
-            if FH.backward_sprint:
-                self.forward_sow = True
-        elif FH.forward_mom:
-            if FH.forward_sprint:
-                self.backward_sow = True
-
-#        if FH.forward_gap >= FH.std_mom/FH.forward_entry_price:
-#            self.forward_reap = True
-#        elif FH.backward_gap >= FH.std_mom/FH.backward_entry_price:
-#            self.backward_reap = True
-
-        if FH.forward_gap >= 0.0:
-            self.forward_reap = True
-        elif FH.backward_gap >= 0.0:
-            self.backward_reap = True
+        if FH.forward_position_size == 0 and FH.backward_position_size == 0:
+            if not FH.forward_sprint:
+                self.forward_target_size = FH.limit_size
+            elif not FH.backward_sprint:
+                self.backward_target_size = FH.limit_size
+        elif FH.forward_goods + FH.backward_goods + FH.balance_overflow < FH.abandon_goods:
+            if FH.forward_position_size == 0:
+                self.forward_target_size = abs(FH.backward_position_size)
+            elif FH.backward_position_size == 0:
+                self.backward_target_size = FH.forward_position_size
+    
+        self.forward_catch = False
+        self.backward_catch = False
+        if FH.forward_position_size >= self.forward_target_size:
+            self.forward_target_size = 0
+        else:
+            if FH.backward_stable_price:
+                self.forward_catch = True
+                self.forward_catch_size = self.forward_target_size - FH.forward_position_size
+        if abs(FH.backward_position_size) >= self.backward_target_size: 
+            self.backward_target_size = 0
+        else:
+            if FH.forward_stable_price:
+                self.backward_catch = True
+                self.backward_catch_size = -self.backward_target_size - FH.backward_position_size
 
         self.forward_gap_balance = False
         self.backward_gap_balance = False
-        if self.forward_reap and FH.forward_stable_price:
-            self.forward_gap_balance = True
-            self.forward_balance_size = - FH.forward_position_size
-        elif self.backward_reap and FH.backward_stable_price:
-            self.backward_gap_balance = True
-            self.backward_balance_size = - FH.backward_position_size
-
-        self.forward_catch = False
-        self.backward_catch = False
-        if self.forward_sow and FH.backward_stable_price:
-            self.forward_catch = True
-            self.forward_catch_size = FH.limit_size - FH.forward_position_size
-        elif self.backward_sow and FH.forward_stable_price:
-            self.backward_catch = True
-            self.backward_catch_size = -FH.limit_size - FH.backward_position_size
 
     def put_position(self):
         if FH.forward_leverage != FH.forward_gap_level:
