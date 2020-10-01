@@ -62,6 +62,7 @@ class FH(object):
         FH.step_hard_std = contract_params['step_hard']
         FH.surplus_abandon = contract_params['surplus_abandon']
         FH.surplus_endure = contract_params['surplus_endure']
+        FH.surplus_switch = contract_params['surplus_switch']
         FH.std_mom_std = contract_params['std_mom']
         FH.std_sprint_std = contract_params['std_sprint']
         FH.std_fin = contract_params['std_fin']
@@ -222,6 +223,7 @@ class FH(object):
             FH.limit_goods = 0.0
         FH.abandon_goods = FH.surplus_abandon/((FH.ask_1+FH.bid_1)/2.0) * max(FH.forward_value,FH.backward_value)
         FH.endure_goods = FH.surplus_endure/((FH.ask_1+FH.bid_1)/2.0) * max(FH.forward_value,FH.backward_value)
+        FH.switch_goods = FH.surplus_switch/((FH.ask_1+FH.bid_1)/2.0) * max(FH.forward_value,FH.backward_value)
 
         if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
             FH.t = -FH.t_b/FH.t_f
