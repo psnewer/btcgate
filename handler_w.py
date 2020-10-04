@@ -20,6 +20,16 @@ class Handler_W(FH):
 
     def get_flag(self):
         self.get_std_flag()
+        self.forward_close = 0
+        self.backward_close = 0
+        if FH.forward_gap > 0.0015:
+            self.forward_close = 2
+        elif FH.forward_gap > 0.0:
+            self.forward_close = 1
+        if FH.backward_gap > 0.0015:
+            self.backward_close = 2
+        elif FH.backward_gap > 0.0:
+            self.backward_close = 1
 
         if FH.forward_account_from == 0:
             FH.forward_account_from = int(time.time())
@@ -44,14 +54,20 @@ class Handler_W(FH):
 
         self.forward_reap = False
         self.backward_reap = False
-        if self.forward_gap > 0.0:
-            self.forward_reap = True
-        elif self.backward_gap > 0.0:
-            self.backward_reap = True
-        elif self.forward_gap < 0.0:
-            self.forward_reap = True
-        elif self.backward_gap < 0.0:
-            self.backward_reap = True
+        self.forward_sow = False
+        self.backward_sow = False
+        if FH.forward_mom:
+            if not FH.forward_sprint:
+                if FH.bid_1 <= FH.forward_band_price:
+                    self.forward_sow = True
+            if self.backward_close > 0:
+                self.backward_reap = True
+        elif FH.backward_mom:
+            if not FH.backward_sprint:
+                if FH.ask_1 >= FH.backward_band_price:
+                    self.backward_sow = True
+            if self.forward_close > 0:
+                self.forward_reap = True
 
         self.forward_gap_balance = False
         self.backward_gap_balance = False
@@ -61,14 +77,26 @@ class Handler_W(FH):
         elif self.backward_reap and FH.backward_stable_price:
             self.backward_gap_balance = True
             self.backward_balance_size = - FH.backward_position_size
-        
+
         self.forward_catch = False
         self.backward_catch = False
+        if self.forward_sow and FH.backward_stable_price:
+            self.forward_catch = True
+            self.forward_catch_size = FH.limit_size - FH.forward_position_size
+        elif self.backward_sow and FH.forward_stable_price:
+            self.backward_catch = True
+            self.backward_catch_size = -FH.limit_size - FH.backward_position_size
 
         if self.forward_gap_balance:
-            self.forward_tif = 'poc'
+            if self.forward_close == 2:
+                self.forward_tif = 'ioc'
+            elif self.forward_close == 1:
+                self.forward_tif = 'poc'
         elif self.backward_gap_balance:
-            self.backward_tif = 'poc'
+            if self.backward_close == 2:
+                self.backward_tif = 'ioc'
+            elif self.backward_close == 1:
+                self.backward_tif = 'poc'
     
     def put_position(self):
         if FH.forward_leverage != FH.forward_gap_level:
