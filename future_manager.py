@@ -43,7 +43,7 @@ class Future_Manager(object):
 
     def get_handler(self):
         print ('aaaa',time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),self.current_handler.tip,FH.t,self.pre_meter)
-        print (FH.goods,FH.balance_overflow,FH.forward_goods+FH.backward_goods+FH.balance_overflow,FH.switch_goods,FH.endure_goods)
+        print (FH.goods,FH.balance_overflow,FH.forward_goods+FH.backward_goods+FH.balance_overflow,FH.forward_goods+FH.backward_goods,FH.switch_goods,FH.endure_goods)
         if FH.forward_goods + FH.backward_goods < FH.switch_goods:
             self.current_meter = 'neg'
         else:
