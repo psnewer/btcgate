@@ -14,13 +14,13 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = -0.00442270324538
+    balance_overflow = 1.72951913293
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
-    goods = 4.75692787893
+    goods = 7.26223104539
     forward_goods = 0.0
     backward_goods = 0.0
     limit_goods = 0.0
@@ -28,7 +28,7 @@ class FH(object):
     balance = False
     forward_sprint = True
     backward_sprint = False
-    forward_band_price = 10524.5
+    forward_band_price = 11363.0
     backward_band_price = -1.0
     t = 0.0
     _T = None
@@ -95,8 +95,9 @@ class FH(object):
         FH.mark_price = float(FH.forward_positions._mark_price)
         FH.ask_1 = float(FH.book._asks[0]._p)
         FH.bid_1 = float(FH.book._bids[0]._p)
-        FH.forward_value = float(FH.forward_positions._value)*FH.ask_1/FH.mark_price
-        FH.backward_value = float(FH.backward_positions._value)*FH.bid_1/FH.mark_price
+        FH.forward_value = float(FH.forward_positions._value)
+        FH.backward_value = float(FH.backward_positions._value)
+        FH.tick_price = (FH.ask_1 + FH.bid_1)/2
 
         FH.forward_limit = FH.limit_size
         FH.backward_limit = FH.limit_size
@@ -109,13 +110,13 @@ class FH(object):
 
 
         if FH.forward_position_size > 0 and FH.forward_entry_price > 0:
-            FH.t_f = FH.ask_1 - FH.forward_entry_price
+            FH.t_f = FH.tick_price - FH.forward_entry_price
             FH.forward_gap = FH.t_f/FH.forward_entry_price
         else:
             FH.t_f = 0.0
             FH.forward_gap = 0.0
         if FH.backward_position_size < 0 and FH.backward_entry_price > 0:
-            FH.t_b = FH.backward_entry_price - FH.bid_1
+            FH.t_b = FH.backward_entry_price - FH.tick_price
             FH.backward_gap = FH.t_b/FH.backward_entry_price
         else:
             FH.t_b = 0.0
@@ -193,19 +194,19 @@ class FH(object):
         if FH.forward_entry_price == 0:
             FH.forward_goods = 0.0
         else:
-            FH.forward_goods = FH.forward_value*(FH.ask_1-FH.forward_entry_price)/FH.forward_entry_price
+            FH.forward_goods = FH.forward_value/FH.mark_price * (FH.tick_price - FH.forward_entry_price)
         if FH.backward_entry_price == 0:
             FH.backward_goods = 0.0
         else:
-            FH.backward_goods = FH.backward_value*(FH.backward_entry_price-FH.bid_1)/FH.backward_entry_price
+            FH.backward_goods = FH.backward_value/FH.mark_price * (FH.backward_entry_price - FH.tick_price)
         if FH.forward_position_size > 0:
-            FH.limit_goods = FH.forward_value*FH.limit_size/FH.forward_position_size
+            FH.limit_goods = FH.forward_value/FH.mark_price*FH.tick_price*FH.limit_size/FH.forward_position_size
         elif FH.backward_position_size < 0:
-            FH.limit_goods = FH.backward_value*FH.limit_size/abs(FH.backward_position_size)
+            FH.limit_goods = FH.backward_value/FH.mark_price*FH.tick_price*FH.limit_size/abs(FH.backward_position_size)
         else:
             FH.limit_goods = 0.0
-        FH.abandon_goods = FH.surplus_abandon/((FH.ask_1+FH.bid_1)/2.0) * FH.limit_goods
-        FH.endure_goods = FH.surplus_endure/((FH.ask_1+FH.bid_1)/2.0) * FH.limit_goods
+        FH.abandon_goods = FH.surplus_abandon/FH.tick_price * FH.limit_goods
+        FH.endure_goods = FH.surplus_endure/FH.tick_price * FH.limit_goods
        
         if FH.forward_goods + FH.backward_goods + FH.balance_overflow > FH.endure_goods:
             if FH.balance_overflow > 0.0:
