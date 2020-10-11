@@ -48,48 +48,14 @@ class Handler_T(FH):
             FH.backward_account_from = int(backward_account_book[0]._time) + 1
         
         if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
-            FH._T = abs(float(FH.backward_position_size) / float(FH.forward_position_size))
-        elif FH.backward_gap < 0.0 and FH.forward_gap >= 0.0:
-            FH._T = abs(float(FH.forward_position_size) / float(FH.backward_position_size))
-        elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
-            if FH.forward_gap > FH.backward_gap:
-                FH._T = abs(float(FH.forward_position_size) / float(FH.backward_position_size))
-            else:
-                FH._T = abs(float(FH.backward_position_size) / float(FH.forward_position_size))
-        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
-            FH._T = 0.61
-
-        if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
-            FH._S = -FH.balance_overflow/FH.forward_goods
-            FH.S_ = -FH.backward_goods/FH.forward_goods
-        elif FH.backward_gap < 0.0 and FH.forward_gap >= 0.0:
-            FH._S = -FH.balance_overflow/FH.backward_goods
-            FH.S_ = -FH.forward_goods/FH.backward_goods
-        elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
-            FH._S = -FH.balance_overflow/(FH.forward_goods+FH.backward_goods)
-            if FH.forward_gap > FH.backward_gap:
-                FH.S_ = -FH.forward_goods/(FH.backward_goods+FH.forward_goods)
-            else:
-                FH.S_ = -FH.backward_goods/(FH.forward_goods+FH.backward_goods)
-        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
-            FH._S = 1.0
-            FH.S_ = 1.0
-
-        if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
-            FH.t = -FH.t_b/FH.t_f
             FH.T_std = 1.0 - 1.0*FH.t
             if FH._T  < FH.T_std:
-                FH.t_tail = min(FH.t_tail,FH.forward_value/FH.mark_price*(FH.ask_1-FH.forward_entry_price+FH.step_hard) + FH.backward_value/FH.mark_price*(FH.backward_entry_price-FH.bid_1-FH.step_hard) + FH.balance_overflow) 
+                FH.t_tail = min(FH.t_tail,FH.forward_value/FH.mark_price*(FH.ask_1-FH.forward_entry_price+FH.step_hard) + FH.backward_value/FH.mark_price*(FH.backward_entry_price-FH.bid_1-FH.step_hard) + FH.balance_overflow)  
         elif FH.backward_gap < 0.0 and FH.forward_gap >= 0.0:
-            FH.t = -FH.t_f/FH.t_b
             FH.T_std = 1.0 - 1.0*FH.t
             if FH._T < FH.T_std:
                 FH.t_tail = min(FH.t_tail,FH.forward_value/FH.mark_price*(FH.ask_1-FH.forward_entry_price-FH.step_hard) + FH.backward_value/FH.mark_price*(FH.backward_entry_price-FH.bid_1+FH.step_hard) + FH.balance_overflow)
         elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
-            if FH.forward_gap > FH.backward_gap:
-                FH.t = -FH.t_f/(FH.t_b+FH.t_f)
-            else:
-                FH.t = -FH.t_b/(FH.t_f+FH.t_b)
             FH.T_std = 1.0
 #        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
 #            FH.T_std = 0.61
