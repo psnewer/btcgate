@@ -5,8 +5,6 @@ import requests
 import time
 import json
 import gate_api
-import sympy
-from sympy import solve,symbols,log
 from gate_api.rest import ApiException
 
 # smtplib模块负责连接服务器和发送邮件
@@ -23,72 +21,37 @@ from email.mime.multipart import MIMEMultipart
 N_message = 100
 
 def send_email(e_html):
-        global N_message
-        if N_message < 500:
-            N_message = N_message + 1
-            time.sleep(3)
-	    sender = '969941416@qq.com'  # 发件人邮箱账号
-	    receive = ['969941416@qq.com']  # 收件人邮箱账号
-	    passwd = 'vrjcijjtujcrbfff'
-	    mailserver = 'smtp.qq.com'
-	    port = '465'
-	    sub = 'Gateio Surveil'
-
-	    try:
-		msg = MIMEMultipart('related')
-		msg['From'] = formataddr(["sender", sender])  # 发件人邮箱昵称、发件人邮箱账号
-		msg['To'] = formataddr(["receiver", receive])  # 收件人邮箱昵称、收件人邮箱账号
-		msg['Subject'] = sub
-		body = """
-		<b>This is GateIO items:</b>
-		<div>{e_html}</div>
-		""".format(e_html = e_html)
-	        text = MIMEText(body, 'html', 'utf-8')
-		msg.attach(text)
-		smtpobj=smtplib.SMTP_SSL(mailserver,465) #本地如果有本地服务器，则用localhost ,默认端口２５,腾讯的（端口465或587）
-		smtpobj.set_debuglevel(1)
-		smtpobj.login(sender,passwd)#登陆QQ邮箱服务器
-		smtpobj.sendmail(sender, receive, msg.as_string())  # 发件人邮箱账号、收件人邮箱账号、发送邮件
-		smtpobj.quit()
-		print('send mail success')
-	    except Exception as e:
-	        print(e)
-		
-
-def send_weixin(msg):
     global N_message
     if N_message < 500:
-	N_message = N_message + 1
-	requests.get("https://sc.ftqq.com/SCU60300T026729377fffbccacceb5c62ab430d7f5d78a7743d03a.send?text={}&desp={}".format('告警', str(N_message)+' '+str(msg)))
-	time.sleep(3)
+        N_message = N_message + 1
+        time.sleep(3)
+        sender = '969941416@qq.com'
+        receive = '969941416@qq.com'
+        passwd = 'vrjcijjtujcrbfff'
+        mailserver = 'smtp.qq.com'
+        port = '465'
+        sub = 'Gateio Surveil'
 
-def regression_1(Pf,Pb,Sf,Sb,P,T_rt,warn=True):
-    x = symbols('x')
-    a = -T_rt * float(Sf) * float(P - Pf) / float(P - Pb)
-    b = T_rt + log(Sb)
-    s = solve(a/x - log(x) + b,x)
-    print (s)
-    res = 0
-    for _s in s:
-        if sympy.im(_s) == 0 and _s > Sf and _s >= Sb:
-#            if _s.evalf() - Sf >= res:
-            res = _s.evalf() - Sf
-            break
-    return res
-
-def regression_2(Pf,Pb,Sf,Sb,P,T_rt,warn=True):
-    x = symbols('x')
-    a = -T_rt * float(P - Pf) / float(P - Pb) / float(Sb)
-    b = -T_rt + log(Sf)
-    s = solve(a*x + log(x) - b,x)
-    print (s)
-    res = 0
-    for _s in s:
-        if sympy.im(_s) == 0 and _s > Sb and _s <= Sf:
-#            if _s.evalf() - Sb >= res:
-            res = _s.evalf() - Sb
-            break
-    return res
+        try:
+            msg = MIMEMultipart('related')
+            msg['From'] = formataddr(["sender", sender])  # �����������ǳơ������������˺�
+            msg['To'] = formataddr(["receiver", receive])  # �ռ��������ǳơ��ռ��������˺�
+            msg['Subject'] = sub
+            body = """
+            <b>This is GateIO items:</b>
+            <div>{e_html}</div>
+            """.format(e_html = e_html)
+            text = MIMEText(body, 'html', 'utf-8')
+            msg.attach(text)
+            smtpobj=smtplib.SMTP_SSL(mailserver,465) #��������б��ط�����������localhost ,Ĭ�϶˿ڣ���,��Ѷ�ģ��˿�465��587��
+            smtpobj.set_debuglevel(1)
+            smtpobj.login(sender,passwd)#��½QQ���������
+            smtpobj.sendmail(sender, receive, msg.as_string())  # �����������˺š��ռ��������˺š������ʼ�
+            smtpobj.quit()
+            print('send mail success')
+        except Exception as e:
+            print(e)
+		
 
 forward_configuration = gate_api.Forward_Configuration()
 backward_configuration = gate_api.Backward_Configuration()

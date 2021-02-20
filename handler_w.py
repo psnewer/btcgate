@@ -19,55 +19,15 @@ class Handler_W(FH):
         self.tip = 'w'
 
     def get_flag(self):
-        self.get_std_flag()
-        self.forward_close = 0
-        self.backward_close = 0
-        if FH.forward_gap > 0.0015:
-            self.forward_close = 2
-        elif FH.forward_gap > 0.0:
-            self.forward_close = 1
-        if FH.backward_gap > 0.0015:
-            self.backward_close = 2
-        elif FH.backward_gap > 0.0:
-            self.backward_close = 1
 
-        if FH.forward_account_from == 0:
-            FH.forward_account_from = int(time.time())
-        if FH.backward_account_from == 0:
-            FH.backward_account_from = int(time.time())
-        forward_account_book = forward_api_instance.list_futures_account_book(settle=FH.settle,_from=FH.forward_account_from)
-        backward_account_book = backward_api_instance.list_futures_account_book(settle=FH.settle,_from=FH.backward_account_from)
-        for item in forward_account_book:
-            if FH.contract in item.text:
-                FH.goods += float(item.change)
-                if item.type == 'pnl':
-                    FH.balance_overflow += float(item.change)
-        for item in backward_account_book:
-            if FH.contract in item.text:
-                FH.goods += float(item.change)
-                if item.type == 'pnl':
-                    FH.balance_overflow += float(item.change)
-        if len(forward_account_book) > 0:
-            FH.forward_account_from = int(forward_account_book[0]._time) + 1
-        if len(backward_account_book) > 0:
-            FH.backward_account_from = int(backward_account_book[0]._time) + 1
+        self.get_std_flag()
 
         self.forward_reap = False
         self.backward_reap = False
-        self.forward_sow = False
-        self.backward_sow = False
-        if FH.forward_mom:
-            if not FH.forward_sprint:
-                if FH.bid_1 <= FH.forward_band_price:
-                    self.forward_sow = True
-            if self.backward_close > 0:
-                self.backward_reap = True
-        elif FH.backward_mom:
-            if not FH.backward_sprint:
-                if FH.ask_1 >= FH.backward_band_price:
-                    self.backward_sow = True
-            if self.forward_close > 0:
-                self.forward_reap = True
+        if FH.forward_position_size != 0:
+            self.forward_reap = True
+        if FH.backward_position_size != 0:
+            self.backward_reap = True
 
         self.forward_gap_balance = False
         self.backward_gap_balance = False
@@ -80,30 +40,15 @@ class Handler_W(FH):
 
         self.forward_catch = False
         self.backward_catch = False
-        if self.forward_sow and FH.backward_stable_price:
-            self.forward_catch = True
-            self.forward_catch_size = FH.limit_size - FH.forward_position_size
-        elif self.backward_sow and FH.forward_stable_price:
-            self.backward_catch = True
-            self.backward_catch_size = -FH.limit_size - FH.backward_position_size
 
-        if self.forward_gap_balance:
-            if self.forward_close == 2:
-                self.forward_tif = 'ioc'
-            elif self.forward_close == 1:
-                self.forward_tif = 'poc'
-        elif self.backward_gap_balance:
-            if self.backward_close == 2:
-                self.backward_tif = 'ioc'
-            elif self.backward_close == 1:
-                self.backward_tif = 'poc'
-    
     def put_position(self):
         if FH.forward_leverage != FH.forward_gap_level:
-            forward_api_instance.update_position_leverage(contract=FH.contract,settle=FH.settle,leverage = FH.forward_gap_level)
+            forward_api_instance.update_position_leverage(contract=FH.contract, settle=FH.settle,
+                                                          leverage=FH.forward_gap_level)
             FH.forward_leverage = FH.forward_gap_level
         if FH.backward_leverage != FH.backward_gap_level:
-            backward_api_instance.update_position_leverage(contract=FH.contract,settle=FH.settle,leverage = FH.backward_gap_level)
+            backward_api_instance.update_position_leverage(contract=FH.contract, settle=FH.settle,
+                                                           leverage=FH.backward_gap_level)
             FH.backward_leverage = FH.backward_gap_level
 
         self.forward_increase_clear = False
@@ -117,30 +62,33 @@ class Handler_W(FH):
             elif order_size < 0:
                 self.forward_reduce_clear = True
             if order_size > 0:
-                if not self.forward_catch or FH.forward_position_size >= FH.forward_limit:
-                    forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                if (not self.forward_catch) or FH.forward_position_size >= FH.forward_limit:
+                    forward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
                 elif self.forward_catch and self.forward_catch_size <= 0:
-                    forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                    forward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
                 elif FH.bid_1 > order_price:
-                    forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                    forward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
             elif order_size < 0:
                 if self.forward_gap_balance:
-                    if (order_price > FH.ask_1 and self.forward_tif=='poc') or (order_price > FH.bid_1 and self.forward_tif=='ioc') or self.forward_balance_size >= 0:
-                        forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                    if order_price > FH.ask_1 or self.forward_balance_size >= 0:
+                        forward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
                 else:
-                    forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                    forward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
         if not self.forward_increase_clear:
             if FH.forward_position_size < FH.forward_limit:
                 if self.forward_catch and self.forward_catch_size > 0:
-                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.bid_1,tif='poc'))
+                    forward_api_instance.create_futures_order(settle=FH.settle,
+                                                              futures_order=FuturesOrder(contract=FH.contract,
+                                                                                         size=self.forward_catch_size,
+                                                                                         price=FH.bid_1, tif='poc'))
         if not self.forward_reduce_clear and self.forward_gap_balance:
             if FH.forward_position_size > 0:
                 if self.forward_balance_size < 0:
-                    if self.forward_tif == 'poc':
-                        forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.forward_balance_size,price = FH.ask_1,tif='poc'))
-                    elif self.forward_tif == 'ioc':
-                        forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.forward_balance_size,price = FH.bid_1*0.9999,tif='ioc'))
-                        
+                    forward_api_instance.create_futures_order(settle=FH.settle,
+                                                              futures_order=FuturesOrder(contract=FH.contract,
+                                                                                         size=self.forward_balance_size,
+                                                                                         price=FH.ask_1, tif='poc'))
+
         self.backward_increase_clear = False
         self.backward_reduce_clear = False
         for order in FH.backward_orders:
@@ -152,38 +100,67 @@ class Handler_W(FH):
             elif order_size > 0:
                 self.backward_reduce_clear = True
             if order_size < 0:
-                if not self.backward_catch or abs(FH.backward_position_size) >= FH.backward_limit:
-                    backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                if (not self.backward_catch) or abs(FH.backward_position_size) >= FH.backward_limit:
+                    backward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
                 elif self.backward_catch and self.backward_catch_size >= 0:
-                    backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                    backward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
                 elif FH.ask_1 < order_price:
-                    backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                    backward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
             elif order_size > 0:
                 if self.backward_gap_balance:
-                    if (order_price < FH.bid_1 and self.backward_tif=='poc') or (order_price < FH.ask_1 and self.backward_tif=='ioc') or self.backward_balance_size <= 0:
-                        backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                    if order_price < FH.bid_1 or self.backward_balance_size <= 0:
+                        backward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
                 else:
-                    backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id)
+                    backward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id)
         if not self.backward_increase_clear:
             if abs(FH.backward_position_size) < FH.backward_limit:
                 if self.backward_catch and self.backward_catch_size < 0:
-                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.ask_1,tif='poc'))
+                    backward_api_instance.create_futures_order(settle=FH.settle,
+                                                               futures_order=FuturesOrder(contract=FH.contract,
+                                                                                          size=self.backward_catch_size,
+                                                                                          price=FH.ask_1, tif='poc'))
         if not self.backward_reduce_clear and self.backward_gap_balance:
             if FH.backward_position_size < 0:
                 if self.backward_balance_size > 0:
-                    if self.backward_tif == 'poc':
-                        backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.backward_balance_size,price = FH.bid_1,tif='poc'))
-                    elif self.backward_tif == 'ioc':
-                        backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.backward_balance_size,price = FH.ask_1*1.0001,tif='ioc'))
+                    backward_api_instance.create_futures_order(settle=FH.settle,
+                                                               futures_order=FuturesOrder(contract=FH.contract,
+                                                                                          size=self.backward_balance_size,
+                                                                                          price=FH.bid_1, tif='poc'))
 
         if FH.forward_liq_flag:
-            forward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle)
+            forward_api_instance.cancel_price_triggered_order_list(contract=FH.contract, settle=FH.settle)
             if FH.forward_liq_price > 0:
-                forward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=2,price=str(round(FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage),FH.quanto)),expiration=2592000)))
-                FH.forward_trigger_liq = FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage)
+                forward_api_instance.create_price_triggered_order(settle=FH.settle,
+                                                                  futures_price_triggered_order=FuturesPriceTriggeredOrder(
+                                                                      initial=FuturesInitialOrder(contract=FH.contract,
+                                                                                                  size=0, price=str(0),
+                                                                                                  close=True, tif='ioc',
+                                                                                                  text='api'),
+                                                                      trigger=FuturesPriceTrigger(strategy_type=0,
+                                                                                                  price_type=1, rule=2,
+                                                                                                  price=str(round(
+                                                                                                      FH.forward_liq_price * (
+                                                                                                                  1.0 + 0.1 * 1.0 / FH.forward_leverage),
+                                                                                                      FH.quanto)),
+                                                                                                  expiration=2592000)))
+                FH.forward_trigger_liq = FH.forward_liq_price * (1.0 + 0.1 * 1.0 / FH.forward_leverage)
         if FH.backward_liq_flag:
-            backward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle)
+            backward_api_instance.cancel_price_triggered_order_list(contract=FH.contract, settle=FH.settle)
             if FH.backward_liq_price > 0:
-                backward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=1,price=str(round(FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage),FH.quanto)),expiration=2592000)))
-                FH.backward_trigger_liq = FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage)
+                backward_api_instance.create_price_triggered_order(settle=FH.settle,
+                                                                   futures_price_triggered_order=FuturesPriceTriggeredOrder(
+                                                                       initial=FuturesInitialOrder(contract=FH.contract,
+                                                                                                   size=0, price=str(0),
+                                                                                                   close=True,
+                                                                                                   tif='ioc',
+                                                                                                   text='api'),
+                                                                       trigger=FuturesPriceTrigger(strategy_type=0,
+                                                                                                   price_type=1, rule=1,
+                                                                                                   price=str(round(
+                                                                                                       FH.backward_liq_price * (
+                                                                                                                   1.0 - 0.1 * 1.0 / FH.backward_leverage),
+                                                                                                       FH.quanto)),
+                                                                                                   expiration=2592000)))
+                FH.backward_trigger_liq = FH.backward_liq_price * (1.0 - 0.1 * 1.0 / FH.backward_leverage)
+
 
