@@ -48,47 +48,13 @@ class Handler_1T(FH):
             FH.backward_account_from = int(backward_account_book[0]._time) + 1
        
         if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
-            FH._T = abs(float(FH.backward_position_size) / float(FH.forward_position_size))
-        elif FH.backward_gap < 0.0 and FH.forward_gap >= 0.0:
-            FH._T = abs(float(FH.forward_position_size) / float(FH.backward_position_size))
-        elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
-            if FH.forward_gap > FH.backward_gap:
-                FH._T = abs(float(FH.forward_position_size) / float(FH.backward_position_size))
-            else:
-                FH._T = abs(float(FH.backward_position_size) / float(FH.forward_position_size))
-        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
-            FH._T = 0.61
-
-        if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
-            FH._S = -FH.balance_overflow/FH.forward_goods
-            FH.S_ = -FH.backward_goods/FH.forward_goods
-        elif FH.backward_gap < 0.0 and FH.forward_gap >= 0.0:
-            FH._S = -FH.balance_overflow/FH.backward_goods
-            FH.S_ = -FH.forward_goods/FH.backward_goods
-        elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
-            FH._S = -FH.balance_overflow/(FH.forward_goods+FH.backward_goods)
-            if FH.forward_gap > FH.backward_gap:
-                FH.S_ = -FH.forward_goods/(FH.backward_goods+FH.forward_goods)
-            else:
-                FH.S_ = -FH.backward_goods/(FH.forward_goods+FH.backward_goods)
-        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
-            FH._S = 1.0
-            FH.S_ = 1.0
-
-        if FH.forward_gap < 0.0 and FH.backward_gap >= 0.0:
-            FH.t = -FH.t_b/FH.t_f
-            self.T_std = 1.6 - FH.t
+            self.T_std = 1.8 - FH.t
             FH.t_head = min(FH.t_head,((1.0-FH.rt_hard)*FH.t+FH.rt_hard)/(1.0+FH.rt_hard*(1.0-FH.t)))
         elif FH.backward_gap < 0.0 and FH.forward_gap >= 0.0:
-            FH.t = -FH.t_f/FH.t_b
-            self.T_std = 1.6 - FH.t
+            self.T_std = 1.8 - FH.t
             FH.t_head = min(FH.t_head,((1.0-FH.rt_hard)*FH.t+FH.rt_hard)/(1.0+FH.rt_hard*(1.0-FH.t)))
         elif FH.forward_gap < 0.0 and FH.backward_gap < 0.0:
-            if FH.forward_gap > FH.backward_gap:
-                FH.t = -FH.t_f/(FH.t_b+FH.t_f)
-            else:
-                FH.t = -FH.t_b/(FH.t_f+FH.t_b)
-            self.T_std = 1.6
+            self.T_std = 1.8
 #        elif FH.forward_gap >= 0.0 and FH.backward_gap >= 0.0:
 #            self.T_std = 0.61
        

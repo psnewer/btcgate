@@ -37,7 +37,7 @@ class Handler_W(FH):
         elif self.backward_reap and FH.backward_stable_price:
             self.backward_gap_balance = True
             self.backward_balance_size = - FH.backward_position_size
-
+        
         self.forward_catch = False
         self.backward_catch = False
 
