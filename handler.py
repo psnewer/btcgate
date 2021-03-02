@@ -13,21 +13,20 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = 0.047236
+    balance_overflow = 0.78
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
-    goods = 0.047236
+    goods = 0.78
     forward_goods = 0.0
     backward_goods = 0.0
     catch = False
     balance = False
-    T_guide = 1.0
-    T_rt = 1.0
-    max_T = 1.0
     _T = None
+    goods_rt = 0.0
+    T_guide = 1.0
     T_std = 1.0
     S_up = 0.0
     S_dn = 0.0
@@ -146,9 +145,9 @@ class FH(object):
         #    FH.step_soft = max_1m
         FH.step_soft = FH.tick_price * 0.001
 
-        if FH.forward_goods > FH.backward_goods:
+        if FH.forward_position_size < abs(FH.backward_position_size):
             FH.current_side = 'forward'
-        elif FH.forward_goods < FH.backward_goods:
+        elif FH.forward_position_size > abs(FH.backward_position_size):
             FH.current_side = 'backward'
             FH.step_soft = -FH.step_soft
         else:
@@ -161,21 +160,25 @@ class FH(object):
 
         print ('step',FH.step_soft)
 
-        if FH.forward_goods <= FH.backward_goods:
+        if FH.current_side == "backward":
             if FH.forward_goods != 0:
                 FH._T = abs(FH.backward_position_size) / float(FH.forward_position_size)
             else:
                 FH._T = 1.0
             FH.D = FH.forward_position_size - abs(FH.backward_position_size)
-        elif FH.forward_goods >= FH.backward_goods:
+        elif FH.current_side == 'forward':
             if FH.backward_goods != 0:
                 FH._T = float(FH.forward_position_size) / abs(FH.backward_position_size)
             else:
                 FH._T = 1.0
             FH.D = abs(FH.backward_position_size) - FH.forward_position_size
+        else:
+            FH.D = 0.0
 
         if FH.forward_position_size <= 0 and abs(FH.backward_position_size) <= 0:
             FH.balance_overflow = 0.0
+
+        FH.margin = FH.forward_goods + FH.backward_goods + FH.balance_overflow
 
         if FH.forward_position_size > 0 and FH.forward_entry_price > 0:
             FH.forward_liq_gap = (FH.mark_price - FH.forward_entry_price)/FH.forward_entry_price
