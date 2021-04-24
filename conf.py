@@ -20,6 +20,47 @@ from email.mime.multipart import MIMEMultipart
 
 N_message = 100
 
+def af(ff):
+    if ff < 0.0:
+        return int(ff * 100 - 0.001) / 100.0
+    elif ff > 0.0:
+        return int(ff * 100 + 0.001) / 100.0
+    else:
+        return ff
+
+def cutoff(tap,star,D,D_std,der='',top=0,bot=0):
+    if D_std < star:
+        nn =   star + int((D_std - star) / tap - 0.001) * tap
+    elif D_std > star:
+        nn =   star + int((D_std - star) / tap + 0.001) * tap
+    else:
+        nn = star
+    if der == 'inc':
+        if abs(D_std - nn) < 0.0001:
+            res = af(D_std - D)
+        else:
+            if D_std > star:
+                res = nn - D
+            else:
+                res = (nn - tap) - D
+    elif der == 'red':
+        if abs(D_std - nn) < 0.0001:
+            res = af(D - D_std)
+        else:
+            if D_std > star:
+                res = D - (nn + tap)
+            else:
+                res = D -nn
+    if top != 0:
+        if nn > top:
+            res -= D_std - nn
+    elif bot != 0:
+        if nn < bot:
+            res -= bot - nn
+    if res < 0.0:
+        res = 0.0
+    return af(res)
+
 def send_email(e_html):
     global N_message
     if N_message < 500:

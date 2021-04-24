@@ -13,80 +13,43 @@ from gate_api import FuturesPriceTrigger
 from gate_api.rest import ApiException
 from conf import *
 from handler import *
+from handler_0t import *
 
 class Handler_T(FH):
+    T_rt = 1.0
+    tap = 1
+
     def __init__(self):
         self.tip = 't'
+        self.tap = Handler_T.tap
+        self.T_rt = Handler_T.T_rt
+        self.T_guide = 0.0
 
     def get_flag(self):
         self.get_std_flag()
 
-        if FH.limit_value > 0.0:
-            FH.goods_rt = FH.margin/FH.limit_value*FH.T_level
-            FH.T_std = FH.T_guide + (1.0/FH.fre) * FH.goods_rt
-            #FH.T_std = FH.T_guide + (FH.forward_goods + FH.backward_goods + FH.balance_overflow) / (FH.limit_value*FH.T_rt) * FH.T_level
-        #if len(FH.forward_orders) + len(FH.backward_orders) == 0:
-        if FH.T_std < 0.0:
-            FH.T_guide += 0.0 - FH.T_std
-            FH.T_std = 0.0
-        #    elif FH.T_std > max_T:
-        #        FH.T_guide += max_T - FH.T_std
-        #        FH.T_std = max_T
-        FH.D_std = FH.limit_size * (1.0 - FH.T_std)
+        if FH.backward_position_size > FH.forward_position_size:
+            FH.current_side = 'forward'
+            self.D = FH.backward_position_size - FH.forward_position_size
+        elif FH.forward_position_size > FH.backward_position_size:
+            FH.current_side = 'backward'
+            self.D = FH.forward_position_size - FH.backward_position_size
+        else:
+            FH.current_side = 'biside'
+            self.D = 0.0
 
-        print(FH.current_side, FH.T_guide, FH.goods_rt/FH.fre)
-        print(FH._T, FH.T_std, FH.D, FH.D_std, FH.forward_stable_price, FH.backward_stable_price)
+        self.get_side()
 
-        #if FH.forward_position_size == 0 or FH.backward_position_size == 0:
-        #    FH.catch = True
-        #    FH.balance = False
-        #    FH.S_dn = FH.tick_price
-        #    FH.S_dn_t = FH.tick_price - FH.step_soft
-        #    FH.S_up = FH.tick_price + FH.step_soft
-        #    FH.S_up_t = FH.tick_price + 2 * FH.step_soft
-        #else:
-        if FH.balance and not FH.catch:
-            if (FH.tick_price >= FH.t_up_S and FH.step_soft > 0) or (
-                    FH.tick_price <= FH.t_up_S and FH.step_soft < 0):
-                FH.balance = False
-                FH.catch = True
-                FH.S_up = FH.tick_price
-                FH.S_up_t = FH.tick_price + FH.step_soft
-                FH.S_dn = FH.tick_price - FH.step_soft
-                FH.S_dn_t = FH.tick_price - 2 * FH.step_soft
-            elif (FH.tick_price <= FH.t_dn_S and FH.step_soft > 0) or (
-                    FH.tick_price >= FH.t_dn_S and FH.step_soft < 0):
-                FH.balance = False
-                FH.catch = True
-                FH.S_dn = FH.tick_price
-                FH.S_dn_t = FH.tick_price - FH.step_soft
-                FH.S_up = FH.tick_price + FH.step_soft
-                FH.S_up_t = FH.tick_price + 2 * FH.step_soft
-            print('balance', FH.tick_price, FH.t_up_S, FH.t_up, FH.t_dn, FH.t_dn_S)
-        elif not FH.balance and FH.catch:
-            if (FH.tick_price >= FH.S_up_t and FH.step_soft > 0) or (
-                    FH.tick_price <= FH.S_up_t and FH.step_soft < 0):
-                FH.catch = False
-                FH.balance = True
-                FH.t_up = FH.tick_price
-                FH.t_dn = FH.tick_price - FH.step_soft
-                FH.t_up_S = FH.tick_price + FH.step_soft
-                FH.t_dn_S = FH.tick_price - 2 * FH.step_soft
-            elif (FH.tick_price <= FH.S_dn_t and FH.step_soft > 0) or (
-                    FH.tick_price >= FH.S_dn_t and FH.step_soft < 0):
-                FH.catch = False
-                FH.balance = True
-                FH.t_dn = FH.tick_price
-                FH.t_up = FH.tick_price + FH.step_soft
-                FH.t_dn_S = FH.tick_price - FH.step_soft
-                FH.t_up_S = FH.tick_price + 2 * FH.step_soft
-            print('catch', FH.tick_price, FH.S_up_t, FH.S_up, FH.S_dn, FH.S_dn_t)
-        elif not FH.balance and not FH.catch:
-            FH.balance = True
-            FH.t_up = FH.tick_price + FH.step_soft
-            FH.t_dn = FH.tick_price - FH.step_soft
-            FH.t_up_S = FH.tick_price + 2 * FH.step_soft
-            FH.t_dn_S = FH.tick_price - 2 * FH.step_soft
+        self.T_std = self.T_guide - FH.goods_rt / self.T_rt
+        self.D_std = FH.limit_size * self.T_std
+
+        if FH.backward_position_size > 0.0 and FH.forward_position_size > 0.0:
+            self.top = FH.D_01 - Handler_0T.tap
+        else:
+            self.top = FH.D_01
+
+        print(FH.current_side, self.T_guide, self.T_rt)
+        print(self.T_std, self.D, self.D_std, FH.forward_stable_price, FH.backward_stable_price)
 
         self.forward_gap_balance = False
         self.forward_balance_size = 0
@@ -96,53 +59,53 @@ class Handler_T(FH):
             if len(FH.forward_orders) + len(FH.backward_orders) == 0:
                 if FH.current_side == 'backward':
                     if FH.tick_price > FH.t_dn:
-                        if FH.stable_spread and FH.D > FH.D_std:
+                        if FH.stable_spread and self.D > self.D_std:
                             self.forward_gap_balance = True
                     elif FH.tick_price <= FH.t_up:
-                        if FH.backward_goods > 0.0:
-                            if FH.backward_stable_price and FH.D <= FH.D_std:
+                        if FH.stable_spread and self.D < self.D_std:
+                            if FH.backward_goods >= 0.0:
                                 self.backward_gap_balance = True
                 elif FH.current_side == 'forward':
                     if FH.tick_price < FH.t_dn:
-                        if FH.stable_spread and FH.D > FH.D_std:
+                        if FH.stable_spread and self.D > self.D_std:
                             self.backward_gap_balance = True
                     elif FH.tick_price >= FH.t_up:
-                        if FH.forward_goods > 0.0:
-                            if FH.forward_stable_price and FH.D <= FH.D_std:
+                        if FH.stable_spread and self.D < self.D_std:
+                            if FH.forward_goods >= 0.0:
                                 self.forward_gap_balance = True
                 elif FH.current_side == 'biside':
-                    FH.T_guide += (1.0 - FH.tap / FH.limit_size) - FH.T_std
-                    FH.T_std = 1.0 - FH.tap / FH.limit_size
-                    FH.D_std = FH.tap
-                    if  FH.tick_price >= FH.t_up:
-                        if FH.forward_stable_price and FH.D <= FH.D_std:
+                    self.adjust_guide(self.tap)
+                    if FH.tick_price >= FH.t_up:
+                        if FH.stable_spread and self.D < self.D_std:
                             if FH.forward_goods >= 0.0:
                                 self.forward_gap_balance = True
                     elif FH.tick_price <= FH.t_dn:
-                        if FH.backward_stable_price and FH.D <= FH.D_std:
+                        if FH.stable_spread and self.D < self.D_std:
                             if FH.backward_goods >= 0.0:
                                 self.backward_gap_balance = True
 
         if self.forward_gap_balance:
-            if FH.current_side == 'forward' or FH.current_side == 'biside':
-                self.forward_balance_size = int(max(FH.D-FH.D_std,-FH.forward_position_size))
-                print ('d1',FH.D-FH.D_std,-FH.forward_position_size)
-            else:
-                if FH.forward_goods < 0:
-                    self.forward_balance_size = int(max(FH.D_std-FH.D,FH.forward_position_size*FH.balance_overflow/FH.forward_goods))
-                    print ('d2',FH.D_std-FH.D,FH.forward_position_size*FH.balance_overflow/FH.forward_goods,-FH.forward_position_size)
+            if FH.forward_position_size > 0.0:
+                if FH.current_side == 'forward' or FH.current_side == 'biside':
+                    self.forward_balance_size = int(min(cutoff(self.tap, 0, self.D, self.D_std, der='inc', top=self.top),FH.forward_position_size))
+                    print ('d1',self.D_std-self.D,FH.forward_position_size)
                 else:
-                    self.forward_balance_size = int(max(FH.D_std-FH.D,-FH.forward_position_size))
+                    if FH.forward_goods < 0:
+                        self.forward_balance_size = int(min(cutoff(self.tap, 0, self.D, self.D_std, der='red', top=self.top), -FH.forward_position_size * min(1.0, max(0.0, FH.balance_overflow) / FH.forward_goods)))
+                        print ('d2',self.D-self.D_std,-FH.forward_position_size*FH.balance_overflow/FH.forward_goods)
+                    else:
+                        self.forward_balance_size = int(min(cutoff(self.tap, 0, self.D, self.D_std, der='red', top=self.top),FH.forward_position_size))
         if self.backward_gap_balance:
-            if FH.current_side == 'backward' or FH.current_side == 'biside':
-                self.backward_balance_size = int(min(FH.D_std-FH.D,-FH.backward_position_size))
-                print ('d3',FH.D_std-FH.D,-FH.backward_position_size)
-            else:
-                if FH.backward_goods < 0:
-                    self.backward_balance_size = int(min(FH.D-FH.D_std,FH.backward_position_size*FH.balance_overflow/FH.backward_goods,-FH.backward_position_size))
-                    print ('d4',FH.D-FH.D_std,FH.backward_position_size*FH.balance_overflow/FH.backward_goods)
+            if FH.backward_position_size > 0.0:
+                if FH.current_side == 'backward' or FH.current_side == 'biside':
+                    self.backward_balance_size = int(min(cutoff(self.tap, 0, self.D, self.D_std, der='inc', top=self.top),FH.backward_position_size))
+                    print ('d3',self.D_std-self.D,FH.backward_position_size)
                 else:
-                    self.backward_balance_size = int(min(FH.D-FH.D_std,-FH.backward_position_size))
+                    if FH.backward_goods < 0:
+                        self.backward_balance_size = int(min(cutoff(self.tap, 0, self.D, self.D_std, der='red', top=self.top), -FH.backward_position_size * min(1.0, max(0.0, FH.balance_overflow) / FH.backward_goods)))
+                        print ('d4',self.D-self.D_std,-FH.backward_position_size*FH.balance_overflow/FH.backward_goods)
+                    else:
+                        self.backward_balance_size = int(min(cutoff(self.tap, 0, self.D, self.D_std, der='red', top=self.top),FH.backward_position_size))
 
         self.forward_catch = False
         self.forward_catch_size = 0
@@ -152,42 +115,40 @@ class Handler_T(FH):
             if len(FH.forward_orders) + len(FH.backward_orders) == 0:
                 if FH.current_side == 'backward':
                     if FH.tick_price <= FH.S_up:
-                        if FH.backward_goods >= 0.0:
-                            if FH.backward_stable_price and FH.D <= FH.D_std:
-                                self.forward_catch = True
-                                self.forward_catch_size = int(min(FH.D_std-FH.D,FH.forward_limit-FH.forward_position_size))
-                                print ('b1',FH.D_std-FH.D,FH.forward_limit-FH.forward_position_size)
-                    elif FH.tick_price >= FH.S_dn:
-                        if FH.stable_spread and FH.D > FH.D_std:
-                            self.backward_catch = True
-                            self.backward_catch_size = int(max(FH.D_std-FH.D,-FH.backward_limit-FH.backward_position_size))
-                            print ('b2',FH.D_std-FH.D,-FH.backward_limit-FH.backward_position_size)
-                elif FH.current_side == 'forward':
-                    if FH.tick_price >= FH.S_up:
-                        if FH.forward_goods >= 0.0:
-                            if FH.forward_stable_price and FH.D <= FH.D_std:
-                                self.backward_catch = True
-                                self.backward_catch_size = int(max(FH.D-FH.D_std,-FH.backward_limit-FH.backward_position_size))
-                                print ('b3',FH.D-FH.D_std,-FH.backward_limit-FH.backward_position_size)
-                    elif FH.tick_price <= FH.S_dn:
-                        if FH.stable_spread and FH.D > FH.D_std:
-                            self.forward_catch = True
-                            self.forward_catch_size = int(min(FH.D-FH.D_std,FH.forward_limit-FH.forward_position_size))
-                            print ('b4',FH.D-FH.D_std,FH.forward_limit-FH.forward_position_size)
-                elif FH.current_side == 'biside':
-                    FH.T_guide += (1.0 - FH.tap/FH.limit_size) - FH.T_std
-                    FH.T_std = 1.0 - FH.tap/FH.limit_size
-                    FH.D_std = FH.tap
-                    if  FH.tick_price <= FH.S_dn:
-                        if FH.backward_stable_price and FH.D <= FH.D_std:
+                        if FH.stable_spread and self.D < self.D_std:
                             if FH.backward_goods >= 0.0:
                                 self.forward_catch = True
-                                self.forward_catch_size = int(min(FH.D_std-FH.D, FH.forward_limit-FH.forward_position_size)*100+0.001)/100.0
+                                self.forward_catch_size = int(min(cutoff(self.tap,0,self.D,self.D_std,der='inc',top=self.top), FH.forward_limit-FH.forward_position_size))
+                                print ('b1',self.D_std-self.D, FH.forward_limit-FH.forward_position_size)
+                    elif FH.tick_price >= FH.S_dn:
+                        if FH.stable_spread and self.D > self.D_std:
+                            self.backward_catch = True
+                            self.backward_catch_size = int(min(cutoff(self.tap,0,self.D,self.D_std,der='red',top=self.top), FH.forward_position_size-FH.backward_position_size))
+                            print ('b2',self.D-self.D_std,FH.backward_limit-FH.backward_position_size)
+                elif FH.current_side == 'forward':
+                    if FH.tick_price >= FH.S_up:
+                        if FH.stable_spread and self.D < self.D_std:
+                            if FH.t_f >= 0.0:
+                                self.backward_catch = True
+                                self.backward_catch_size = int(min(cutoff(self.tap,0,self.D,self.D_std,der='inc',top=self.top), FH.backward_limit-FH.backward_position_size))
+                                print ('b3',self.D_std-self.D,FH.backward_limit-FH.backward_position_size)
+                    elif FH.tick_price <= FH.S_dn:
+                        if FH.stable_spread and self.D > self.D_std:
+                            self.forward_catch = True
+                            self.forward_catch_size = int(min(cutoff(self.tap, 0, self.D, self.D_std, der='red', top=self.top),FH.backward_position_size - FH.forward_position_size))
+                            print ('b4',self.D-self.D_std,FH.forward_limit-FH.forward_position_size)
+                elif FH.current_side == 'biside':
+                    self.adjust_guide(self.tap)
+                    if  FH.tick_price <= FH.S_dn:
+                        if FH.stable_spread and self.D < self.D_std:
+                            if FH.backward_goods >= 0.0:
+                                self.forward_catch = True
+                                self.forward_catch_size = int(min(cutoff(self.tap,0,self.D,self.D_std,der='inc',top=self.top), FH.forward_limit-FH.forward_position_size))
                     elif FH.tick_price >= FH.S_up:
-                        if FH.forward_stable_price and FH.D <= FH.D_std:
+                        if FH.stable_spread and self.D < self.D_std:
                             if FH.forward_goods >= 0.0:
                                 self.backward_catch = True
-                                self.backward_catch_size = int(max(FH.D-FH.D_std, -FH.backward_limit-FH.backward_position_size)*100+0.001)/100.0
+                                self.backward_catch_size = int(min(cutoff(self.tap,0,self.D,self.D_std,der='inc',top=self.top), FH.backward_limit-FH.backward_position_size))
 
     def put_position(self):
         if FH.forward_leverage != FH.forward_gap_level:
@@ -208,15 +169,14 @@ class Handler_T(FH):
             elif order_size < 0:
                 self.forward_reduce_clear = True
             if order_size > 0:
-                if (not self.forward_catch) or FH.forward_position_size >= FH.forward_limit:
-                    forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
-                elif self.forward_catch and self.forward_catch_size <= 0:
-                    forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
-                elif FH.bid_1 > order_price:
-                    forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
+                if self.forward_catch:
+                    if FH.bid_1 > order_price:
+                        forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
+                else:
+                    forward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id, _request_timeout=10)
             elif order_size < 0:
                 if self.forward_gap_balance:
-                    if order_price > FH.ask_1 or self.forward_balance_size >= 0:
+                    if order_price > FH.ask_1:
                         forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
                 else:
                     forward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
@@ -226,8 +186,8 @@ class Handler_T(FH):
                     forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.forward_catch_size, price = FH.bid_1,tif='poc'),_request_timeout=10)
         if not self.forward_reduce_clear and self.forward_gap_balance:
             if FH.forward_position_size > 0:
-                if self.forward_balance_size < 0:
-                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.forward_balance_size,price = FH.ask_1,tif='poc'),_request_timeout=10)
+                if self.forward_balance_size > 0:
+                    forward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=-self.forward_balance_size,price = FH.ask_1,tif='poc'),_request_timeout=10)
 
         self.backward_increase_clear = False
         self.backward_reduce_clear = False
@@ -240,35 +200,44 @@ class Handler_T(FH):
             elif order_size > 0:
                 self.backward_reduce_clear = True
             if order_size < 0:
-                if (not self.backward_catch) or abs(FH.backward_position_size) >= FH.backward_limit:
-                    backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
-                elif self.backward_catch and self.backward_catch_size >= 0:
-                    backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
-                elif FH.ask_1 < order_price:
-                    backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
+                if self.backward_catch:
+                    if FH.ask_1 < order_price:
+                        backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
+                else:
+                    backward_api_instance.cancel_futures_order(settle=FH.settle, order_id=order_id, _request_timeout=10)
             elif order_size > 0:
                 if self.backward_gap_balance:
-                    if order_price < FH.bid_1 or self.backward_balance_size <= 0:
+                    if order_price < FH.bid_1:
                         backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
                 else:
                     backward_api_instance.cancel_futures_order(settle=FH.settle,order_id=order_id,_request_timeout=10)
         if not self.backward_increase_clear:
-            if abs(FH.backward_position_size) < FH.backward_limit:
-                if self.backward_catch and self.backward_catch_size < 0:
-                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = self.backward_catch_size, price = FH.ask_1,tif='poc'),_request_timeout=10)
+            if FH.backward_position_size < FH.backward_limit:
+                if self.backward_catch and self.backward_catch_size > 0:
+                    backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size = -self.backward_catch_size, price = FH.ask_1,tif='poc'),_request_timeout=10)
         if not self.backward_reduce_clear and self.backward_gap_balance:
-            if FH.backward_position_size < 0:
+            if FH.backward_position_size > 0:
                 if self.backward_balance_size > 0:
                     backward_api_instance.create_futures_order(settle=FH.settle,futures_order=FuturesOrder(contract=FH.contract,size=self.backward_balance_size,price = FH.bid_1,tif='poc'),_request_timeout=10)
 
-        if FH.forward_liq_flag:
-            forward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle,_request_timeout=10)
-            if FH.forward_liq_price > 0:
-                forward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=2,price=str(round(FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage),FH.quanto)),expiration=2592000)),_request_timeout=10)
-                FH.forward_trigger_liq = FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage)
-        if FH.backward_liq_flag:
-            backward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle)
-            if FH.backward_liq_price > 0:
-                backward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=1,price=str(round(FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage),FH.quanto)),expiration=2592000)),_request_timeout=10)
-                FH.backward_trigger_liq = FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage)
+        #if FH.forward_liq_flag:
+        #    forward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle,_request_timeout=10)
+        #    if FH.forward_liq_price > 0:
+        #        forward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=2,price=str(round(FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage),FH.quanto)),expiration=2592000)),_request_timeout=10)
+        #        FH.forward_trigger_liq = FH.forward_liq_price*(1.0+0.1*1.0/FH.forward_leverage)
+        #if FH.backward_liq_flag:
+        #    backward_api_instance.cancel_price_triggered_order_list(contract=FH.contract,settle=FH.settle,_request_timeout=10)
+        #    if FH.backward_liq_price > 0:
+        #        backward_api_instance.create_price_triggered_order(settle=FH.settle,futures_price_triggered_order=FuturesPriceTriggeredOrder(initial=FuturesInitialOrder(contract=FH.contract,size=0,price=str(0),close=True,tif='ioc',text='api'),trigger=FuturesPriceTrigger(strategy_type=0,price_type=1,rule=1,price=str(round(FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage),FH.quanto)),expiration=2592000)),_request_timeout=10)
+        #        FH.backward_trigger_liq = FH.backward_liq_price*(1.0-0.1*1.0/FH.backward_leverage)
+
+    def adjust_guide(self,D_std):
+        self.T_guide += D_std / FH.limit_size - (self.T_guide - FH.goods_rt / self.T_rt)
+        self.T_std = D_std / FH.limit_size
+        self.D_std = D_std
+
+    def adjust_rt(self,D_std):
+        self.T_rt = FH.goods_rt / (self.T_guide - D_std / FH.limit_size)
+        self.T_std = D_std / FH.limit_size
+        self.D_std = D_std
 

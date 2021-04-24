@@ -13,21 +13,21 @@ from gate_api.rest import ApiException
 from conf import *
 
 class FH(object):
-    balance_overflow = 0.78
+    balance_overflow = 0.0
     forward_account_from = 0
     backward_account_from = 0
     forward_trigger_liq = -1
     backward_trigger_liq = -1
     quanto = None
-    goods = 0.78
+    goods = 0.0
     forward_goods = 0.0
     backward_goods = 0.0
     catch = False
     balance = False
-    _T = None
+    limit_value = 0.0
+    pre_side = ''
+    current_side = ''
     goods_rt = 0.0
-    T_guide = 1.0
-    T_std = 1.0
     S_up = 0.0
     S_dn = 0.0
     t_up = 0.0
@@ -36,15 +36,13 @@ class FH(object):
     S_dn_t = 0.0
     t_up_S = 0.0
     t_dn_S = 0.0
-    pre_side = 'biside'
 
     def __init__(self,contract = '',contract_params = {}):
         FH.contract = contract
         FH.settle = contract_params['settle']
-        FH.fre = contract_params['fre']
         FH.T_level = contract_params['T_level']
-        FH.tap = contract_params['tap']
         FH.level = contract_params['level']
+        FH.D_01 = contract_params['D_01']
         FH.limit_size = contract_params['limit_size']
         FH.limit_spread = contract_params['limit_spread']
         FH.quanto = contract_params['quanto']
@@ -56,16 +54,16 @@ class FH(object):
         forward_orders = forward_api_instance.list_futures_orders(contract=FH.contract,settle=FH.settle,status='open',_request_timeout=10,async_req=True)
         backward_orders = backward_api_instance.list_futures_orders(contract=FH.contract,settle=FH.settle,status='open',_request_timeout=10,async_req=True)
         candles=backward_api_instance.list_futures_candlesticks(contract=FH.contract,settle=FH.settle,interval='1m',_request_timeout=10,async_req=True)
-        #candles_5m=backward_api_instance.list_futures_candlesticks(contract=FH.contract,settle=FH.settle,interval='5m',_request_timeout=10,async_req=True)
-        #candles_1h=backward_api_instance.list_futures_candlesticks(contract=FH.contract,settle=FH.settle,interval='1h',_request_timeout=10,async_req=True)
+        candles_5m=backward_api_instance.list_futures_candlesticks(contract=FH.contract,settle=FH.settle,interval='5m',_request_timeout=10,async_req=True)
+        candles_1h=backward_api_instance.list_futures_candlesticks(contract=FH.contract,settle=FH.settle,interval='1h',_request_timeout=10,async_req=True)
         book = backward_api_instance.list_futures_order_book(contract=FH.contract,settle=FH.settle,_request_timeout=10,async_req=True)
         forward_positions = forward_api_instance.get_position(contract=FH.contract,settle=FH.settle,_request_timeout=10,async_req=True)
         backward_positions = backward_api_instance.get_position(contract=FH.contract,settle=FH.settle,_request_timeout=10,async_req=True)
         FH.forward_orders = forward_orders.get()
         FH.backward_orders = backward_orders.get()
         candlesticks = candles.get()
-        #candlesticks_5m = candles_5m.get()
-        #candlesticks_1h = candles_1h.get()
+        candlesticks_5m = candles_5m.get()
+        candlesticks_1h = candles_1h.get()
         FH.book = book.get()
         FH.forward_positions = forward_positions.get()
         FH.backward_positions = backward_positions.get()
@@ -74,7 +72,7 @@ class FH(object):
         FH.forward_liq_price = float(FH.forward_positions._liq_price)
         FH.backward_liq_price = float(FH.backward_positions._liq_price)
         FH.forward_position_size = float(FH.forward_positions._size)
-        FH.backward_position_size = float(FH.backward_positions._size)
+        FH.backward_position_size = abs(float(FH.backward_positions._size))
         FH.forward_leverage = float(FH.forward_positions._leverage)
         FH.backward_leverage = float(FH.backward_positions._leverage)
         FH.mark_price = float(FH.forward_positions._mark_price)
@@ -100,12 +98,13 @@ class FH(object):
             FH.backward_goods = 0.0
         else:
             FH.backward_goods = FH.backward_value/FH.mark_price * (FH.backward_entry_price - FH.ask_1)
-        if FH.forward_position_size > 0:
-            FH.limit_value = FH.forward_value/FH.mark_price*FH.tick_price*FH.limit_size/FH.forward_position_size
-        elif FH.backward_position_size < 0:
-            FH.limit_value = FH.backward_value/FH.mark_price*FH.tick_price*FH.limit_size/abs(FH.backward_position_size)
-        else:
-            FH.limit_value = 0.0
+        #if FH.forward_position_size > 0:
+        #    FH.limit_value = FH.forward_value/FH.mark_price*FH.tick_price*FH.limit_size/FH.forward_position_size
+        #elif FH.backward_position_size < 0:
+        #    FH.limit_value = FH.backward_value/FH.mark_price*FH.tick_price*FH.limit_size/FH.backward_position_size
+        #else:
+        #    FH.limit_value = 0.0
+        FH.limit_value = FH.tick_price * FH.limit_size / 10000
         FH.abandon_goods = FH.surplus_abandon/FH.tick_price * FH.limit_value
         FH.endure_goods = FH.surplus_endure/FH.tick_price * FH.limit_value
 
@@ -134,48 +133,22 @@ class FH(object):
                     FH.forward_stable_price = True
                 if (c - o)/c > 0:
                     FH.backward_stable_price = True
-        #if len(candlesticks) > 10:
-        #    abs1m = []
-        #    for i in range(2, 12):
-        #        o = float(candlesticks[len(candlesticks) - i]._o)
-        #        c = float(candlesticks[len(candlesticks) - i]._c)
-        #        abs1m.append(abs(c - o))
-        #    abs1m = np.nan_to_num(abs1m)
-        #    max_1m = np.max(abs1m)
-        #    FH.step_soft = max_1m
+
+        if len(candlesticks_5m) > 10:
+            abs5m = []
+            for i in range(1, 11):
+                o = float(candlesticks_5m[len(candlesticks_5m) - i]._o)
+                c = float(candlesticks_5m[len(candlesticks_5m) - i]._c)
+                abs5m.append(abs(c - o))
+            abs5m = np.nan_to_num(abs5m)
+            max_5m = np.max(abs5m)
+            FH.step_hard = max_5m
         FH.step_soft = FH.tick_price * 0.001
-
-        if FH.forward_position_size < abs(FH.backward_position_size):
-            FH.current_side = 'forward'
-        elif FH.forward_position_size > abs(FH.backward_position_size):
-            FH.current_side = 'backward'
-            FH.step_soft = -FH.step_soft
-        else:
-            FH.current_side = 'biside'
-
-        if FH.current_side != FH.pre_side:
-            FH.pre_side = FH.current_side
-            FH.catch = False
-            FH.balance = False
+        #FH.step_hard = FH.tick_price * 0.001
 
         print ('step',FH.step_soft)
 
-        if FH.current_side == "backward":
-            if FH.forward_goods != 0:
-                FH._T = abs(FH.backward_position_size) / float(FH.forward_position_size)
-            else:
-                FH._T = 1.0
-            FH.D = FH.forward_position_size - abs(FH.backward_position_size)
-        elif FH.current_side == 'forward':
-            if FH.backward_goods != 0:
-                FH._T = float(FH.forward_position_size) / abs(FH.backward_position_size)
-            else:
-                FH._T = 1.0
-            FH.D = abs(FH.backward_position_size) - FH.forward_position_size
-        else:
-            FH.D = 0.0
-
-        if FH.forward_position_size <= 0 and abs(FH.backward_position_size) <= 0:
+        if FH.forward_position_size <= 0 and FH.backward_position_size <= 0:
             FH.balance_overflow = 0.0
 
         FH.margin = FH.forward_goods + FH.backward_goods + FH.balance_overflow
@@ -227,6 +200,12 @@ class FH(object):
         if len(backward_account_book) > 0:
             FH.backward_account_from = int(backward_account_book[0]._time) + 1
 
+        if FH.forward_position_size == 0 and FH.backward_position_size == 0:
+            FH.balance_overflow = 0.0
+
+        FH.margin = FH.forward_goods + FH.backward_goods + FH.balance_overflow
+        FH.goods_rt = FH.margin / FH.limit_value * FH.T_level
+
         if FH.forward_position_size == 0:
             FH.forward_trigger_liq = 0
         if FH.backward_position_size == 0:
@@ -239,3 +218,60 @@ class FH(object):
             FH.backward_liq_flag = True
         else:
             FH.backward_liq_flag = False
+
+    def get_side(self):
+
+        if FH.current_side == 'backward':
+            FH.step_soft = -FH.step_soft
+            FH.step_hard = -FH.step_hard
+
+        if FH.current_side != FH.pre_side:
+            FH.pre_side = FH.current_side
+            FH.catch = False
+            FH.balance = False
+
+        if FH.balance and not FH.catch:
+            if (FH.tick_price >= FH.t_up_S and FH.step_soft > 0) or (FH.tick_price <= FH.t_up_S and FH.step_soft < 0):
+                FH.balance = False
+                FH.catch = True
+                FH.S_up = FH.tick_price
+                FH.S_up_t = FH.tick_price + FH.step_hard
+                FH.S_dn = FH.tick_price - FH.step_soft
+                FH.S_dn_t = FH.tick_price - 2 * FH.step_soft
+            elif (FH.tick_price <= FH.t_dn_S and FH.step_soft > 0) or (FH.tick_price >= FH.t_dn_S and FH.step_soft < 0):
+                FH.balance = False
+                FH.catch = True
+                FH.S_dn = FH.tick_price
+                FH.S_dn_t = FH.tick_price - FH.step_soft
+                FH.S_up = FH.tick_price + FH.step_hard
+                FH.S_up_t = FH.tick_price + 2 * FH.step_hard
+            print('balance', FH.tick_price, FH.t_up_S, FH.t_up, FH.t_dn, FH.t_dn_S)
+        elif not FH.balance and FH.catch:
+            if (FH.tick_price >= FH.S_up_t and FH.step_soft > 0) or (FH.tick_price <= FH.S_up_t and FH.step_soft < 0):
+                FH.catch = False
+                FH.balance = True
+                FH.t_up = FH.tick_price
+                FH.t_dn = FH.tick_price - FH.step_soft
+                FH.t_up_S = FH.tick_price + FH.step_hard
+                FH.t_dn_S = FH.tick_price - 2 * FH.step_soft
+            elif (FH.tick_price <= FH.S_dn_t and FH.step_soft > 0) or (FH.tick_price >= FH.S_dn_t and FH.step_soft < 0):
+                FH.catch = False
+                FH.balance = True
+                FH.t_dn = FH.tick_price
+                FH.t_up = FH.tick_price + FH.step_hard
+                FH.t_dn_S = FH.tick_price - FH.step_soft
+                FH.t_up_S = FH.tick_price + 2 * FH.step_hard
+            print('catch', FH.tick_price, FH.S_up_t, FH.S_up, FH.S_dn, FH.S_dn_t)
+        elif not FH.balance and not FH.catch:
+            if FH.current_side == 'biside':
+                FH.catch = True
+                FH.S_up = FH.tick_price + FH.step_soft
+                FH.S_dn = FH.tick_price - FH.step_soft
+                FH.S_up_t = FH.tick_price + 2 * FH.step_soft
+                FH.S_dn_t = FH.tick_price - 2 * FH.step_soft
+            else:
+                FH.catch = True
+                FH.S_up = FH.tick_price + FH.step_hard
+                FH.S_dn = FH.tick_price - FH.step_soft
+                FH.S_up_t = FH.tick_price + 2 * FH.step_hard
+                FH.S_dn_t = FH.tick_price - 2 * FH.step_soft
